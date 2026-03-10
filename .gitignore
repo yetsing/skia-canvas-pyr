@@ -70,3 +70,10 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+*.js
+*.ts
+*.jsx
+*.tsx
+
+index.pyi
