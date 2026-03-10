@@ -145,3 +145,26 @@ class CanvasGradient:
     def conic(theta: float, x: float, y: float) -> CanvasGradient: ...
     def add_color_stop(self, offset: float, color: str) -> None: ...
     def repr(self) -> str: ...
+
+# region font library
+
+class TypefaceDetails:
+    family: str
+    weight: int
+    slant: str
+    width: str
+    file: str
+
+class FamilyDetails:
+    family: str
+    weights: List[float]
+    widths: List[str]
+    styles: List[str]
+
+def get_families() -> List[str]: ...
+def has(family_name: str) -> bool: ...
+def family(family_name: str) -> FamilyDetails | None: ...
+def add_family(filenames: List[str], alias: str | None) -> List[TypefaceDetails]: ...
+def reset() -> None: ...
+
+# endregion
