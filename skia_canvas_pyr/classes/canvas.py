@@ -2,7 +2,10 @@ import math
 
 from typing import TYPE_CHECKING
 
-from ..skia_canvas_pyr import CanvasTexture as CanvasTextureRs
+from ..skia_canvas_pyr import (
+    CanvasTexture as CanvasTextureRs,
+    CanvasGradient as CanvasGradientRs,
+)
 
 if TYPE_CHECKING:
     from typing import TypeAlias, Literal, List, Tuple
@@ -63,3 +66,27 @@ class CanvasTexture:
 
     def __repr__(self) -> str:
         return f"CanvasTexture({self.__texture.repr()})"
+
+    def core(self) -> CanvasTextureRs:
+        return self.__texture
+
+
+class CanvasGradient:
+    __slots__ = ("__gradient",)
+
+    def __init__(self, style: Literal["linear", "radial", "conic"], *args: float):
+        match style:
+            case "linear":
+                self.__gradient = CanvasGradientRs.linear(*args)
+            case "radial":
+                self.__gradient = CanvasGradientRs.radial(*args)
+            case "conic":
+                self.__gradient = CanvasGradientRs.conic(*args)
+            case _:
+                raise ValueError("Invalid gradient style")
+
+    def addColorStop(self, offset: float, color: str) -> None:
+        self.__gradient.add_color_stop(offset, color)
+
+    def core(self) -> CanvasGradientRs:
+        return self.__gradient
