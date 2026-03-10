@@ -209,3 +209,12 @@ class Path2D:
             end = max(-1, end) + 1
         path = self.__path.trim(start, end, inverted)
         return Path2D(path)
+
+    def core(self) -> Path2DRs:
+        return self.__path
+
+    def __repr__(self) -> str:
+        return f"Path2D(d={self.d!r}, bounds={self.bounds!r}, edges={self.edges!r})"
+
+    def __str__(self) -> str:
+        return f"Path2D(d={self.d}, bounds={self.bounds}, edges={self.edges})"

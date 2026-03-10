@@ -4,6 +4,7 @@ mod context;
 mod filter;
 mod image;
 mod path;
+mod texture;
 mod utils;
 
 /// A Python module implemented in Rust.

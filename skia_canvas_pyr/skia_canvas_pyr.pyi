@@ -112,3 +112,19 @@ class Path2DBounds:
     right: float
     width: float
     height: float
+
+class CanvasTexture:
+    def __init__(
+        self,
+        line: float,
+        cap: str,
+        angle: float,
+        outline: bool,
+        h: float,
+        v: float,
+        x: float,
+        y: float,
+        path: None | Path2D = None,
+        color: None | str = None,
+    ) -> None: ...
+    def repr(self) -> str: ...

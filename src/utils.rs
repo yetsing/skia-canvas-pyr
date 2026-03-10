@@ -31,3 +31,60 @@ pub fn to_matrix(t: &[f32]) -> Option<Matrix> {
     _ => None,
   }
 }
+
+pub fn css_to_color(css: &str) -> Option<Color> {
+  css.parse::<Rgba>().ok().map(
+    |Rgba {
+       red,
+       green,
+       blue,
+       alpha,
+     }| {
+      Color::from_argb(
+        (alpha * 255.0).round() as u8,
+        (red * 255.0).round() as u8,
+        (green * 255.0).round() as u8,
+        (blue * 255.0).round() as u8,
+      )
+    },
+  )
+}
+
+//
+// Skia Enums
+//
+
+use skia_safe::{
+  TileMode,
+  TileMode::{Decal, Repeat},
+};
+pub fn to_repeat_mode(repeat: &str) -> Option<(TileMode, TileMode)> {
+  let mode = match repeat.to_lowercase().as_str() {
+    "repeat" | "" => (Repeat, Repeat),
+    "repeat-x" => (Repeat, Decal),
+    "repeat-y" => (Decal, Repeat),
+    "no-repeat" => (Decal, Decal),
+    _ => return None,
+  };
+  Some(mode)
+}
+
+use skia_safe::PaintCap;
+pub fn to_stroke_cap(mode_name: &str) -> Option<PaintCap> {
+  let mode = match mode_name.to_lowercase().as_str() {
+    "butt" => PaintCap::Butt,
+    "round" => PaintCap::Round,
+    "square" => PaintCap::Square,
+    _ => return None,
+  };
+  Some(mode)
+}
+
+pub fn from_stroke_cap(mode: PaintCap) -> String {
+  match mode {
+    PaintCap::Butt => "butt",
+    PaintCap::Round => "round",
+    PaintCap::Square => "square",
+  }
+  .to_string()
+}
