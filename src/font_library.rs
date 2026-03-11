@@ -490,7 +490,7 @@ pub fn family(family_name: String) -> Option<FamilyDetails> {
 #[pyfunction]
 pub fn add_family(filenames: Vec<String>, alias: Option<String>) -> PyResult<Vec<TypefaceDetails>> {
   let mut results = Vec::with_capacity(filenames.len());
-  for (_i, filename) in filenames.iter().enumerate() {
+  for filename in filenames.iter() {
     let path = Path::new(&filename);
     let typeface = match fs::read(path) {
       Err(why) => {

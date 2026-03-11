@@ -19,6 +19,7 @@ mod skia_canvas_pyr {
   use super::{
     font_library::{FamilyDetails, add_family, family, get_families, has, reset},
     gradient::CanvasGradient,
+    image::Image,
     path::Path2D,
     texture::CanvasTexture,
     typography::TypefaceDetails,
