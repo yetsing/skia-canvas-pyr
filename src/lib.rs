@@ -6,6 +6,7 @@ mod font_library;
 mod gradient;
 mod image;
 mod path;
+mod pattern;
 mod texture;
 mod typography;
 mod utils;

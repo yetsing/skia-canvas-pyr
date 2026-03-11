@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal, Sequence, TypeAlias, Tuple, List, TypedDict
+from typing import Literal, Sequence, TypeAlias, Tuple, List
 
 PathOpName = Literal[
     "difference",
@@ -124,8 +124,8 @@ class CanvasTexture:
         v: float,
         x: float,
         y: float,
-        path: None | Path2D = None,
-        color: None | str = None,
+        path: None | Path2D,
+        color: None | str,
     ) -> None: ...
     def repr(self) -> str: ...
 
@@ -156,9 +156,28 @@ class Image:
     def get_complete(self) -> bool: ...
     def pixels(
         self,
-        color_type: str | None = None,
-        color_space: str | None = None,
+        color_type: str | None,
+        color_space: str | None,
     ) -> List[int] | None: ...
+
+class CanvasPattern:
+    from .classes.imagery import ImageData
+    @staticmethod
+    def from_image(
+        src: Image,
+        canvas_width: float,
+        canvas_height: float,
+        repetition: str | None,
+    ) -> CanvasPattern: ...
+    @staticmethod
+    def from_image_data(
+        src: "ImageData",
+        repetition: str | None,
+    ) -> CanvasPattern: ...
+    @staticmethod
+    def from_canvas() -> CanvasPattern: ...
+    def set_transform(self, matrix: Sequence[float]) -> None: ...
+    def repr(self) -> str: ...
 
 # region font library
 

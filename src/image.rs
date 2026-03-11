@@ -162,6 +162,26 @@ impl ImageData {
   }
 }
 
+impl FromPyObject<'_, '_> for ImageData {
+  type Error = PyErr;
+
+  fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+    let width: f32 = obj.getattr("width")?.extract()?;
+    let height: f32 = obj.getattr("height")?.extract()?;
+    let color_type: String = obj.getattr("color_type")?.extract()?;
+    let color_space: String = obj.getattr("color_space")?.extract()?;
+    let data: Vec<u8> = obj.getattr("data")?.extract()?;
+    let buffer = Data::new_copy(&data);
+    Ok(ImageData::new(
+      buffer,
+      width,
+      height,
+      color_type,
+      color_space,
+    ))
+  }
+}
+
 /* #region Python Methods */
 
 #[pymethods]
