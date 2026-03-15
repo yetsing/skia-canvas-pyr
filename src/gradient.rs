@@ -70,7 +70,8 @@ impl Gradient {
   }
 }
 
-#[pyclass(unsendable)]
+#[pyclass(unsendable, skip_from_py_object)]
+#[derive(Clone)]
 pub struct CanvasGradient {
   gradient: Rc<RefCell<Gradient>>,
 }

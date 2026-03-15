@@ -2,10 +2,11 @@
 Parsers for properties that take CSS-style strings as values
 """
 
+import dataclasses
 import math
 import re
 from collections.abc import Sequence
-from typing import cast
+from typing import cast, Any, List, Dict
 
 # -- Font & Variant --------------------------------------------------------------------
 #    https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant
@@ -22,6 +23,24 @@ numSizeRE = re.compile(r"^(\-?[\d\.]+)(px|pt|pc|in|cm|mm|%|em|ex|ch|rem|q)")
 namedWeightRE = re.compile(r"^(normal|bold(er)?|lighter)$")
 numWeightRE = re.compile(r"^(1000|\d{1,3})$")
 parameterizedRE = re.compile(r"([\w\-]+)\((.*?)\)")
+
+# region Some Object
+
+
+@dataclasses.dataclass
+class Font:
+    style: str
+    variant: str
+    weight: float
+    stretch: str
+    size: float
+    lineHeight: float | None
+    family: List[str]
+    features: Dict[str, float | List[str]]
+    canonical: str
+
+
+# endregion
 
 
 def split_by(text, sep_regex):
@@ -99,8 +118,8 @@ def _is_finite(value):
         return False
 
 
-def parseFont(text):
-    if cache["font"].get(text, None) is None and text not in cache["font"]:
+def parseFont(text) -> Font | None:
+    if text not in cache["font"]:
         try:
             if not isinstance(text, str):
                 raise ValueError("Font specification must be a string")
@@ -114,33 +133,27 @@ def parseFont(text):
                 "stretch": "normal",
             }
             value = re.sub(r"\s*/\*s", "/", text)
-            tokens = split_by(value, r"\s+")
+            tokens = value.split()
 
             while tokens:
                 token = tokens.pop(0)
-                match = (
-                    "style"
-                    if styleRE.match(token)
-                    else (
-                        "variant"
-                        if smallcapsRE.match(token)
-                        else (
-                            "stretch"
-                            if stretchRE.match(token)
-                            else (
-                                "weight"
-                                if isWeight(token)
-                                else "size" if isSize(token) else None
-                            )
-                        )
-                    )
-                )
+                match_case = None
+                if styleRE.match(token):
+                    match_case = "style"
+                elif smallcapsRE.match(token):
+                    match_case = "variant"
+                elif stretchRE.match(token):
+                    match_case = "stretch"
+                elif isWeight(token):
+                    match_case = "weight"
+                elif isSize(token):
+                    match_case = "size"
 
-                if match in ("style", "variant", "stretch", "weight"):
-                    font[match] = token
+                if match_case in ("style", "variant", "stretch", "weight"):
+                    font[match_case] = token
                     continue
 
-                if match == "size":
+                if match_case == "size":
                     # size is the pivot point between the style fields and the family name stack,
                     # so start processing what's been collected
                     parts = split_by(token, r"/")
@@ -166,23 +179,15 @@ def parseFont(text):
                     variant = font["variant"]
 
                     # make sure all the numeric fields have legitimate values
-                    invalid = (
-                        f'font size "{emSize}"'
-                        if not _is_finite(size)
-                        else (
-                            f'line height "{leading}"'
-                            if (lineHeight is not None and not _is_finite(lineHeight))
-                            else (
-                                f'font weight "{font["weight"]}"'
-                                if not _is_finite(weight)
-                                else (
-                                    f'font family "{", ".join(tokens)}"'
-                                    if len(family) == 0
-                                    else False
-                                )
-                            )
-                        )
-                    )
+                    invalid = ""
+                    if not _is_finite(size):
+                        invalid = f'font size "{emSize}"'
+                    elif lineHeight is not None and not _is_finite(lineHeight):
+                        invalid = f'line height "{leading}"'
+                    elif not _is_finite(weight):
+                        invalid = f'font weight "{font["weight"]}"'
+                    elif len(family) == 0:
+                        invalid = f'font family "{", ".join(tokens)}"'
 
                     if not invalid:
                         # include a re-stringified version of the decoded/absified values
@@ -212,8 +217,9 @@ def parseFont(text):
                             "features": features,
                             "canonical": " ".join([p for p in canonical_parts if p]),
                         }
-                        cache["font"][text] = result
-                        return result
+                        font_obj = Font(**result)
+                        cache["font"][text] = font_obj
+                        return font_obj
 
                     raise ValueError(f"Invalid {invalid}")
 
@@ -233,43 +239,28 @@ def parseSize(text, emSize=16.0):
     if m:
         size = float(m.group(1))
         unit = m.group(2)
-        return size * (
-            1
-            if unit == "px"
-            else (
-                1 / 0.75
-                if unit == "pt"
-                else (
-                    emSize / 100
-                    if unit == "%"
-                    else (
-                        16
-                        if unit == "pc"
-                        else (
-                            96
-                            if unit == "in"
-                            else (
-                                96.0 / 2.54
-                                if unit == "cm"
-                                else (
-                                    96.0 / 25.4
-                                    if unit == "mm"
-                                    else (
-                                        96 / 25.4 / 4
-                                        if unit == "q"
-                                        else (
-                                            emSize
-                                            if re.search(r"r?em", unit)
-                                            else math.nan
-                                        )
-                                    )
-                                )
-                            )
-                        )
-                    )
-                )
-            )
-        )
+        unit_num = math.nan
+        match unit:
+            case "px":
+                unit_num = 1
+            case "pt":
+                unit_num = 1 / 0.75
+            case "%":
+                unit_num = emSize / 100
+            case "pc":
+                unit_num = 16
+            case "in":
+                unit_num = 96
+            case "cm":
+                unit_num = 96.0 / 2.54
+            case "mm":
+                unit_num = 96.0 / 25.4
+            case "q":
+                unit_num = 96 / 25.4 / 4
+            case _:
+                if re.search(r"r?em", unit):
+                    unit_num = emSize
+        return size * unit_num
 
     m = namedSizeRE.search(str(text))
     if m:
@@ -284,31 +275,23 @@ def parseFlexibleSize(text):
     if m:
         size = float(m.group(1))
         unit = m.group(2)
-        px = size * (
-            1
-            if unit == "px"
-            else (
-                1 / 0.75
-                if unit == "pt"
-                else (
-                    16
-                    if unit == "pc"
-                    else (
-                        96
-                        if unit == "in"
-                        else (
-                            96.0 / 2.54
-                            if unit == "cm"
-                            else (
-                                96.0 / 25.4
-                                if unit == "mm"
-                                else 96 / 25.4 / 4 if unit == "q" else math.nan
-                            )
-                        )
-                    )
-                )
-            )
-        )
+        unit_num = math.nan
+        match unit:
+            case "px":
+                unit_num = 1
+            case "pt":
+                unit_num = 1 / 0.75
+            case "pc":
+                unit_num = 16
+            case "in":
+                unit_num = 96
+            case "cm":
+                unit_num = 96.0 / 2.54
+            case "mm":
+                unit_num = 96.0 / 25.4
+            case "q":
+                unit_num = 96 / 25.4 / 4
+        px = size * unit_num
         return {"size": size, "unit": unit, "px": px}
     return None
 
@@ -324,7 +307,7 @@ def parseWeight(text):
     m = numWeightRE.search(str(text))
     if m:
         val = int(m.group(0))
-        return val if val != 0 else math.nan
+        return val or math.nan
 
     m = namedWeightRE.search(str(text))
     if m:
@@ -334,11 +317,11 @@ def parseWeight(text):
 
 
 def parseVariant(text):
-    if cache["variant"].get(text, None) is None and text not in cache["variant"]:
+    if text not in cache["variant"]:
         variants = []
-        features: dict[str, object] = {"on": [], "off": []}
+        features: Dict[str, Any] = {"on": [], "off": []}
 
-        for token in split_by(str(text), r"\s+"):
+        for token in text.split():
             if token == "normal":
                 return {"variants": [token], "features": {"on": [], "off": []}}
             if token in featureMap:
@@ -500,28 +483,22 @@ def parseCornerRadii(r):
     if any(pt["x"] < 0 or pt["y"] < 0 for pt in radii):
         raise RangeError("Corner radius cannot be negative")
 
-    return (
-        [radii[0], radii[0], radii[0], radii[0]]
-        if len(radii) == 1
-        else (
-            [radii[0], radii[1], radii[0], radii[1]]
-            if len(radii) == 2
-            else (
-                [radii[0], radii[1], radii[2], radii[1]]
-                if len(radii) == 3
-                else (
-                    [radii[0], radii[1], radii[2], radii[3]]
-                    if len(radii) == 4
-                    else [
-                        {"x": 0, "y": 0},
-                        {"x": 0, "y": 0},
-                        {"x": 0, "y": 0},
-                        {"x": 0, "y": 0},
-                    ]
-                )
-            )
-        )
-    )
+    match len(radii):
+        case 1:
+            return [radii[0], radii[0], radii[0], radii[0]]
+        case 2:
+            return [radii[0], radii[1], radii[0], radii[1]]
+        case 3:
+            return [radii[0], radii[1], radii[2], radii[1]]
+        case 4:
+            return [radii[0], radii[1], radii[2], radii[3]]
+        case _:
+            return [
+                {"x": 0, "y": 0},
+                {"x": 0, "y": 0},
+                {"x": 0, "y": 0},
+                {"x": 0, "y": 0},
+            ]
 
 
 # -- Image Filters -----------------------------------------------------------------------

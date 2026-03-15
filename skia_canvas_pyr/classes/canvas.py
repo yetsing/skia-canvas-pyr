@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import base64
+import json
 import math
+import os
+import re
+import warnings
 
 from typing import TYPE_CHECKING
 
@@ -8,17 +13,164 @@ from ..skia_canvas_pyr import (
     CanvasTexture as CanvasTextureRs,
     CanvasGradient as CanvasGradientRs,
     CanvasPattern as CanvasPatternRs,
+    Canvas as CanvasRs,
 )
-from .imagery import Image, ImageData
+from .imagery import Image, ImageData, _pixel_size
 from .geometry import toSkMatrix
 
 if TYPE_CHECKING:
-    from typing import Any, TypeAlias, Literal, List, Tuple, overload
+    from typing import Any, TypeAlias, Literal, List, Tuple, overload, TypedDict
+    from .sc_type import ColorType, ExportFormat, CanvasLineCap, Offset
+    from .context import CanvasRenderingContext2D
     from .geometry import Matrix
     from .path import Path2D
 
-    Offset: TypeAlias = List[float] | Tuple[float, float] | float
-    CanvasLineCap: TypeAlias = Literal["butt", "round", "square"]
+    class CanvasInitOptions(TypedDict, total=False):
+        text_contrast: float
+        text_gamma: float
+        gpu: bool
+
+    class EngineDetails(TypedDict):
+        renderer: Literal["CPU", "GPU"]
+        api: Literal["Vulkan", "Metal"]
+        device: str
+        driver: str | None
+        threads: int
+        error: str | None
+        textContrast: float
+        textGamma: float
+
+    class RenderOptions(TypedDict, total=False):
+        # Page to export: Defaults to 1 (i.e., first page)
+        page: float
+        # Background color to draw beneath transparent parts of the canvas
+        matte: str
+        # Number of pixels per grid ‘point’ (defaults to 1)
+        density: float
+        # Number of samples used for antialising each pixel
+        msaa: float | bool
+
+    class ExportOptions(RenderOptions, total=False):
+        # Quality for lossy encodings like JPEG & WEBP (0.0–1.0)
+        quality: float
+        # Optionally convert text to bézier paths (SVG only)
+        outline: bool
+        # Optionally use 4:2:0 chroma subsampling (JPEG only)
+        downsample: bool
+        # Color type to use when exporting in "raw" format
+        color_type: ColorType
+
+    class SaveOptions(ExportOptions, total=False):
+        # Image format to use (either as a file extension or a mime-type string)
+        format: ExportFormat
+
+
+class Canvas:
+    __slots__ = ("__contexts", "__canvas")
+
+    def __init__(
+        self, width: float, height: float, opt: CanvasInitOptions | None = None
+    ):
+        opt = opt or {}
+        self.__canvas = CanvasRs(
+            opt.get("text_contrast", 0),
+            opt.get("text_gamma", 1.4),
+            opt.get("gpu", True),
+        )
+        self.__contexts: List[CanvasRenderingContext2D] = []
+
+    def getContext(self, kind: Literal["2d"]):
+        if kind == "2d":
+            return self.__contexts[0] if self.__contexts else self.newPage()
+
+    @property
+    def gpu(self) -> bool:
+        return self.__canvas.get_engine() == "gpu"
+
+    @gpu.setter
+    def gpu(self, mode: bool) -> None:
+        self.__canvas.set_engine("gpu" if mode else "cpu")
+
+    @property
+    def engine(self) -> EngineDetails:
+        return json.loads(self.__canvas.get_engine_status())
+
+    @property
+    def width(self) -> float:
+        return self.__canvas.get_width()
+
+    @width.setter
+    def width(self, value: float) -> None:
+        self.__canvas.set_width(value)
+        if self.__contexts:
+            pass  # TODO: resize contexts
+
+    @property
+    def height(self) -> float:
+        return self.__canvas.get_height()
+
+    @height.setter
+    def height(self, value: float) -> None:
+        self.__canvas.set_height(value)
+        if self.__contexts:
+            pass  # TODO: resize contexts
+
+    def newPage(self, *args: float) -> CanvasRenderingContext2D:
+        from .context import CanvasRenderingContext2D
+
+        ctx = CanvasRenderingContext2D(self)
+        self.__contexts.insert(0, ctx)
+        if args:
+            width, heigth = args
+            self.width = width
+            self.height = heigth
+        return ctx
+
+    @property
+    def pages(self) -> List[CanvasRenderingContext2D]:
+        ctxs = self.__contexts[:]
+        ctxs.reverse()
+        return ctxs
+
+    def saveAsSync(self, filename: str, opt: SaveOptions | None = None) -> None:
+        warnings.warn(
+            "Canvas.saveAsSync is deprecated; use Canvas.toFileSync instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.toFileSync(filename, opt)
+
+    def toFileSync(self, filename: str, opts: SaveOptions | None = None) -> None:
+        result = _export_options(self, opts, filename)
+        pages = list(map(lambda x: x.core(), result["pages"]))
+        padding = result["padding"]
+        pattern = result["pattern"]
+        self.__canvas.save_sync(pages, pattern, padding, result)
+
+    def toBufferSync(
+        self, extension: str = "png", opts: ExportOptions | None = None
+    ) -> bytes:
+        result = _export_options(self, opts, extension=extension)
+        pages = list(map(lambda x: x.core(), result["pages"]))
+        return self.__canvas.to_buffer_sync(pages, result)
+
+    def toURLSync(
+        self, extension: str = "png", opts: ExportOptions | None = None
+    ) -> str:
+        result = _export_options(self, opts, extension=extension)
+        mime = result["mime"]
+        buffer = self.toBufferSync(extension, opts)
+        return f"data:{mime};base64,{base64.b64encode(buffer).decode()}"
+
+    def toDataURL(self, extension: str = "png", quality: float | None = None, /) -> str:
+        if quality is not None and not isinstance(quality, (int, float)):
+            raise TypeError("Expected a number between 0.0-1.0 for `quality`")
+        return self.toURLSync(
+            extension, {"quality": quality} if quality is not None else None
+        )
+
+    def core(self) -> CanvasRs:
+        return self.__canvas
 
 
 class CanvasTexture:
@@ -82,8 +234,8 @@ class CanvasTexture:
 class CanvasGradient:
     __slots__ = ("__gradient",)
 
-    def __init__(self, style: Literal["linear", "radial", "conic"], *args: float):
-        match style:
+    def __init__(self, style: Literal["Linear", "Radial", "Conic"], *args: float):
+        match style.lower():
             case "linear":
                 self.__gradient = CanvasGradientRs.linear(*args)
             case "radial":
@@ -105,8 +257,8 @@ class CanvasPattern:
 
     def __init__(
         self,
-        canvas: Any,
-        src: Image | ImageData,
+        canvas: Canvas,
+        src: Canvas | Image | ImageData,
         repetition: (
             Literal["repeat", "repeat-x", "repeat-y", "no-repeat"] | None
         ) = None,
@@ -117,7 +269,9 @@ class CanvasPattern:
             )
         elif isinstance(src, ImageData):
             self.__pattern = CanvasPatternRs.from_image_data(src, repetition)
-        # TODO: from canvas
+        elif isinstance(src, Canvas):
+            ctx = src.getContext("2d")
+            self.__pattern = CanvasPatternRs.from_canvas(ctx.core(), repetition)
         else:
             raise TypeError("CanvasPatterns require a source Image or a Canvas")
 
@@ -139,3 +293,211 @@ class CanvasPattern:
 
     def core(self) -> CanvasPatternRs:
         return self.__pattern
+
+
+#
+# Validation of the options dict shared by the `saveAs`, `toBuffer`, and `toDataURL` methods
+#
+
+if TYPE_CHECKING:
+
+    class ExportOptionsReturn(TypedDict):
+        filename: str
+        pattern: str
+        format: str
+        mime: str | None
+        pages: List[CanvasRenderingContext2D]
+        padding: float | None
+        quality: float
+        matte: str | None
+        density: float
+        msaa: float | None
+        outline: bool
+        text_contrast: float
+        text_gamma: float
+        downsample: bool
+        color_type: str | None
+
+
+def _export_options(
+    canvas: Canvas,
+    opts: ExportOptions | SaveOptions | float | None,
+    filename="",
+    extension="",
+) -> ExportOptionsReturn:
+    options: ExportOptions
+    if opts is None:
+        options = {}
+    elif isinstance(opts, (int, float)):
+        options = {"quality": opts}
+    else:
+        options = opts
+
+    page = options.get("page")
+    quality = options.get("quality")
+    matte = options.get("matte")
+    density = options.get("density")
+    msaa = options.get("msaa")
+    outline = options.get("outline")
+    downsample = options.get("downsample")
+    color_type = options.get("color_type", options.get("colorType"))
+
+    # Only allow format overrides when exporting to file.
+    image_format = options.get("format") if filename else None
+
+    # Ensure the canvas has at least one context so we can export an empty image.
+    if not canvas.pages:
+        canvas.getContext("2d")
+
+    formats = {
+        "png": "image/png",
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "webp": "image/webp",
+        "pdf": "application/pdf",
+        "svg": "image/svg+xml",
+        "raw": "application/octet-stream",
+    }
+    mimes = {
+        "image/png": "png",
+        "image/jpeg": "jpg",
+        "image/webp": "webp",
+        "application/octet-stream": "raw",
+        "application/pdf": "pdf",
+        "image/svg+xml": "svg",
+    }
+    expected = '"png", "jpg", "webp", "raw", "pdf", or "svg"'
+
+    def to_mime(ext: str) -> str | None:
+        return formats.get((ext or "").lstrip(".").lower())
+
+    def from_mime(mime: str) -> str | None:
+        return mimes.get((mime or "").lower())
+
+    ext_raw = (
+        image_format
+        or re.sub(r"@\d+x$", "", extension or "", flags=re.IGNORECASE)
+        or os.path.splitext(str(filename))[1]
+    )
+    ext = "" if ext_raw is None else str(ext_raw)
+    fmt = from_mime(to_mime(ext) or str(ext))
+    mime = to_mime(fmt or "")
+
+    if not ext:
+        raise ValueError(
+            "Cannot determine image format (use a filename extension or 'format' argument)"
+        )
+    if not fmt:
+        raise ValueError(f'Unsupported file format "{ext}" (expected {expected})')
+
+    name = str(filename)
+    padding: int | None = None
+    is_sequence = False
+
+    def _replace_pattern(match: re.Match[str]) -> str:
+        nonlocal is_sequence, padding
+        is_sequence = True
+        width_str = match.group(1)
+        width = int(width_str) if width_str else None
+        if width is not None:
+            padding = width
+        elif padding is None:
+            padding = -1
+        return "{}"
+
+    pattern = re.sub(r"{(\d*)}", _replace_pattern, name)
+
+    pages = canvas.pages
+    page_count = len(pages)
+
+    idx: int | None = None
+    if (
+        isinstance(page, (int, float))
+        and not isinstance(page, bool)
+        and math.isfinite(page)
+    ):
+        raw_idx = page - 1 if page > 0 else (page_count + page if page < 0 else None)
+        if raw_idx is not None:
+            if int(raw_idx) != raw_idx:
+                raise TypeError("Expected an integer value for `page`")
+            idx = int(raw_idx)
+
+    if idx is not None and (idx < 0 or idx >= page_count):
+        if page_count == 1:
+            raise IndexError(f"Canvas only has a page 1 ({idx} is out of bounds)")
+        raise IndexError(f"Canvas has pages 1-{page_count} ({idx} is out of bounds)")
+
+    if idx is not None:
+        pages = [pages[idx]]
+    elif is_sequence or fmt == "pdf":
+        pages = pages
+    else:
+        pages = pages[-1:]
+
+    # Keep canvas-level text rendering settings with the export options.
+    engine = canvas.engine
+    text_contrast = engine.get(
+        "textContrast",
+    )
+    text_gamma = engine.get("textGamma")
+
+    if quality is None:
+        quality = 0.92
+    elif (
+        isinstance(quality, bool)
+        or not isinstance(quality, (int, float))
+        or not math.isfinite(float(quality))
+        or quality < 0
+        or quality > 1
+    ):
+        raise TypeError("Expected a number between 0.0-1.0 for `quality`")
+
+    if density is None:
+        base = extension or os.path.basename(name)
+        stem = os.path.splitext(base)[0]
+        match = re.search(r"@(\d+)x$", stem, flags=re.IGNORECASE)
+        density = int(match.group(1), 10) if match else 1
+    elif (
+        isinstance(density, bool)
+        or not isinstance(density, (int, float))
+        or not float(density).is_integer()
+        or density < 1
+    ):
+        raise TypeError("Expected a non-negative integer for `density`")
+    else:
+        density = int(density)
+
+    if msaa is None or msaa is True:
+        msaa = None
+    else:
+        try:
+            msaa = float(msaa)
+        except (TypeError, ValueError):
+            raise TypeError(
+                "The number of MSAA samples must be an integer >=0"
+            ) from None
+        if not math.isfinite(msaa) or msaa < 0:
+            raise TypeError("The number of MSAA samples must be an integer >=0")
+
+    if color_type is not None:
+        if not isinstance(color_type, str):
+            raise TypeError("Expected a string value for `color_type`")
+        _pixel_size(color_type)
+
+    return {
+        "filename": name,
+        "pattern": pattern,
+        "format": fmt,
+        "mime": mime,
+        "pages": pages,
+        "padding": padding,
+        "quality": float(quality),
+        "matte": matte,
+        "density": density,
+        "msaa": float(msaa) if msaa is not None else None,
+        "outline": bool(outline),
+        "text_contrast": text_contrast,
+        "text_gamma": text_gamma,
+        "downsample": bool(downsample),
+        "color_type": color_type,
+    }

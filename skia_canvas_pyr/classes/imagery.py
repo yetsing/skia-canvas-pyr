@@ -3,8 +3,10 @@ import re
 
 from typing import Tuple, overload, TypedDict
 
+
 from ..skia_canvas_pyr import Image as ImageRs
 from ..urls import fetch_url, decode_data_url, expand_url
+from .sc_type import ImageDataSettings
 
 
 def loadImage(src) -> "Image":
@@ -15,7 +17,7 @@ def loadImage(src) -> "Image":
 class Image:
     __slots__ = ("__image",)
 
-    def __init__(self, data: bytes | str, src: str = "") -> None:
+    def __init__(self, data: bytes | str | None = None, src: str = "") -> None:
         self.__image = ImageRs()
 
         data = expand_url(data)
@@ -30,7 +32,7 @@ class Image:
                 raise ValueError("Failed to decode image data")
             if not src:
                 self.__image.set_src(data)
-        else:
+        elif data:
             raise TypeError(f"Unsupported data type: {type(data).__name__}")
 
     @property
@@ -71,11 +73,6 @@ class Image:
         return self.__image
 
 
-class ColorOption(TypedDict):
-    color_type: str
-    color_space: str
-
-
 class ImageData:
     __slots__ = (
         "__color_space",
@@ -89,17 +86,24 @@ class ImageData:
     @overload
     def __init__(self, width: int, height: int, /) -> None: ...
     @overload
-    def __init__(self, width: int, height: int, option: ColorOption, /) -> None: ...
+    def __init__(
+        self, width: int, height: int, option: ImageDataSettings | None, /
+    ) -> None: ...
     @overload
     def __init__(self, buffer: bytes, width: int, /) -> None: ...
     @overload
     def __init__(self, buffer: bytes, width: int, height: int, /) -> None: ...
     @overload
     def __init__(
-        self, buffer: bytes, width: int, height: int, option: ColorOption, /
+        self,
+        buffer: bytes,
+        width: int,
+        height: int,
+        option: ImageDataSettings | None,
+        /,
     ) -> None: ...
     @overload
-    def __init__(self, image: Image, option: ColorOption, /) -> None: ...
+    def __init__(self, image: Image, option: ImageDataSettings | None, /) -> None: ...
     @overload
     def __init__(self, image_data: "ImageData", /) -> None: ...
 
@@ -116,7 +120,7 @@ class ImageData:
         elif isinstance(args[0], Image):
             # from Image
             image = args[0]
-            option = args[1] if len(args) > 1 else {}
+            option = args[1] if len(args) > 1 and args[1] else {}
             color_space = option.get("colorSpace", "srgb")
             color_type = option.get("colorType", "rgba")
             width = int(image.width)
@@ -132,7 +136,7 @@ class ImageData:
             data = bytearray(args[0])
             width = int(args[1])
             height = int(args[2]) if len(args) > 2 else 0
-            option = args[3] if len(args) > 3 else {}
+            option = args[3] if len(args) > 3 and args[3] else {}
             color_space = option.get("colorSpace", "srgb")
             color_type = option.get("colorType", "rgba")
             bytes_per_pixel = _pixel_size(color_type)
@@ -145,7 +149,7 @@ class ImageData:
         else:
             width = int(args[0])
             height = int(args[1])
-            option = args[2] if len(args) > 2 else {}
+            option = args[2] if len(args) > 2 and args[2] else {}
             color_space = option.get("colorSpace", "srgb")
             color_type = option.get("colorType", "rgba")
             bytes_per_pixel = _pixel_size(color_type)
@@ -169,6 +173,14 @@ class ImageData:
 
     @property
     def colorType(self) -> str:
+        return self.__color_type
+
+    @property
+    def color_space(self) -> str:
+        return self.__color_space
+
+    @property
+    def color_type(self) -> str:
         return self.__color_type
 
     @property

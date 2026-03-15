@@ -1,8 +1,10 @@
 use pyo3::prelude::*;
 
+mod canvas;
 mod context;
 mod filter;
 mod font_library;
+mod gpu;
 mod gradient;
 mod image;
 mod path;
@@ -21,7 +23,8 @@ mod skia_canvas_pyr {
     font_library::{FamilyDetails, add_family, family, get_families, has, reset},
     gradient::CanvasGradient,
     image::Image,
-    path::Path2D,
+    path::{Path2D, Path2DBounds},
+    pattern::CanvasPattern,
     texture::CanvasTexture,
     typography::TypefaceDetails,
   };

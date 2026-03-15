@@ -32,7 +32,8 @@ impl Default for Texture {
   }
 }
 
-#[pyclass(unsendable)]
+#[pyclass(unsendable, skip_from_py_object)]
+#[derive(Clone)]
 pub struct CanvasTexture {
   texture: Rc<RefCell<Texture>>,
   outline: bool,

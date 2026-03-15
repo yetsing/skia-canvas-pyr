@@ -1,14 +1,12 @@
 use pyo3::prelude::*;
 use skia_safe::{
-  AlphaType, ColorSpace, ColorType, Data, FontMgr, ISize, Image as SkImage, ImageInfo, Picture,
-  PictureRecorder, Rect, Size,
+  AlphaType, ColorSpace, ColorType, Data, Image as SkImage, ImageInfo, Picture, PictureRecorder,
+  Rect, Size,
   image::images,
   svg::{self, Length, LengthUnit},
 };
-use std::cell::RefCell;
 
-// TODO
-// use crate::context::Context2D;
+use crate::context::Context2D;
 use crate::font_library::FontLibrary;
 use crate::utils::*;
 
@@ -53,15 +51,15 @@ impl Clone for Content {
 }
 
 impl Content {
-  //   pub fn from_context(ctx: &mut Context2D, use_vector: bool) -> Self {
-  //     match use_vector {
-  //       true => ctx
-  //         .get_picture()
-  //         .map(|p| Content::Vector(p, ctx.bounds.size())),
-  //       false => ctx.get_image().map(|i| Content::Bitmap(i)),
-  //     }
-  //     .unwrap_or_default()
-  //   }
+  pub fn from_context(ctx: &mut Context2D, use_vector: bool) -> Self {
+    match use_vector {
+      true => ctx
+        .get_picture()
+        .map(|p| Content::Vector(p, ctx.bounds.size())),
+      false => ctx.get_image().map(|i| Content::Bitmap(i)),
+    }
+    .unwrap_or_default()
+  }
 
   pub fn from_image_data(image_data: ImageData) -> Self {
     let info = image_data.image_info();

@@ -3,10 +3,10 @@ use skia_safe::{FilterMode, Matrix, Rect, Shader, Size, TileMode};
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use crate::context::Context2D;
+use crate::filter::ImageFilter;
 use crate::image::{Content, Image, ImageData};
 use crate::utils::*;
-// use crate::context::BoxedContext2D;
-use crate::filter::ImageFilter;
 
 pub struct Stamp {
   content: Content,
@@ -15,7 +15,8 @@ pub struct Stamp {
   matrix: Matrix,
 }
 
-#[pyclass(unsendable)]
+#[pyclass(unsendable, skip_from_py_object)]
+#[derive(Clone)]
 pub struct CanvasPattern {
   pub stamp: Rc<RefCell<Stamp>>,
 }
@@ -125,10 +126,36 @@ impl CanvasPattern {
 
   // TODO from_canvas
   #[staticmethod]
-  pub fn from_canvas() -> PyResult<Self> {
-    Err(pyo3::exceptions::PyNotImplementedError::new_err(
-      "from_canvas() is not implemented yet",
-    ))
+  pub fn from_canvas(src: &mut Context2D, repetition: Option<String>) -> PyResult<Self> {
+    let repetition = repetition.unwrap_or_default();
+    let repeat = match to_repeat_mode(&repetition) {
+      Some(mode) => mode,
+      None => {
+        return Err(pyo3::exceptions::PyValueError::new_err(format!(
+          "Invalid repetition mode: {}",
+          repetition
+        )));
+      }
+    };
+
+    let dims = src.bounds.size();
+    let matrix = Matrix::new_identity();
+    let content = src
+      .get_picture()
+      .map(|picture| Content::Vector(picture, dims))
+      .unwrap_or_default();
+
+    let stamp = Stamp {
+      content,
+      dims,
+      repeat,
+      matrix,
+    };
+    let canvas_pattern = CanvasPattern {
+      stamp: Rc::new(RefCell::new(stamp)),
+    };
+
+    Ok(canvas_pattern)
   }
 
   pub fn set_transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {

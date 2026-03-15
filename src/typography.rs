@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::types::PyMapping;
 use serde_json::{Value, json};
 use skia_safe::font_style::{FontStyle, Slant, Weight, Width};
 use skia_safe::textlayout::{
@@ -7,14 +8,13 @@ use skia_safe::textlayout::{
   TextDirection, TextStyle,
 };
 use skia_safe::{Color, FontMetrics, Paint, Path as SkPath, Point, Rect, Typeface};
+use std::f64::consts::E;
 use std::iter::zip;
 use std::ops::Range;
 
-// use crate::font_library::FontLibrary;
+use crate::context::State;
+use crate::font_library::FontLibrary;
 use crate::utils::*;
-// use crate::context::State;
-
-// TODO: font_library
 
 //
 // Text layout and metrics
@@ -34,21 +34,30 @@ pub struct Typesetter {
 }
 
 impl Typesetter {
-  // pub fn new(state:&State, text: &str, width:Option<f32>) -> Self {
-  //   let (char_style, graf_style, text_decoration, baseline, text_wrap) = state.typography();
-  //   let typefaces = FontLibrary::with_shared(|lib|
-  //     lib
-  //       .set_hinting(graf_style.hinting_is_on())
-  //       .fonts_for_style(&char_style)
-  //   );
-  //   let width = width.unwrap_or(GALLEY);
-  //   let text = match text_wrap{
-  //     true => text.to_string(),
-  //     false => text.replace("\n", " ")
-  //   };
+  pub fn new(state: &State, text: &str, width: Option<f32>) -> Self {
+    let (char_style, graf_style, text_decoration, baseline, text_wrap) = state.typography();
+    let typefaces = FontLibrary::with_shared(|lib| {
+      lib
+        .set_hinting(graf_style.hinting_is_on())
+        .fonts_for_style(&char_style)
+    });
+    let width = width.unwrap_or(GALLEY);
+    let text = match text_wrap {
+      true => text.to_string(),
+      false => text.replace("\n", " "),
+    };
 
-  //   Typesetter{text, width, baseline, typefaces, char_style, graf_style, text_decoration, text_wrap}
-  // }
+    Typesetter {
+      text,
+      width,
+      baseline,
+      typefaces,
+      char_style,
+      graf_style,
+      text_decoration,
+      text_wrap,
+    }
+  }
 
   pub fn layout(&self, paint: &Paint) -> (Paragraph, Point) {
     let mut char_style = self.char_style.clone();
@@ -335,88 +344,58 @@ impl FontSpec {
   }
 }
 
-// pub fn font_arg(cx: &mut FunctionContext, idx: usize) -> NeonResult<Option<FontSpec>> {
-//   let arg = cx.argument::<JsValue>(idx)?;
-//   if arg.is_a::<JsNull, _>(cx) {
-//     return Ok(None);
-//   }
+impl FromPyObject<'_, '_> for FontSpec {
+  type Error = PyErr;
 
-//   let font_desc = cx.argument::<JsObject>(idx)?;
-//   let families = strings_at_key(cx, &font_desc, "family")?;
-//   let canonical = string_for_key(cx, &font_desc, "canonical")?;
-//   let variant = string_for_key(cx, &font_desc, "variant")?;
-//   let size = float_for_key(cx, &font_desc, "size")?;
-//   let weight = Weight::from(float_for_key(cx, &font_desc, "weight")? as i32);
-//   let slant = to_slant(string_for_key(cx, &font_desc, "style")?.as_str());
-//   let width = to_width(string_for_key(cx, &font_desc, "stretch")?.as_str());
-//   let line_height = opt_float_for_key(cx, &font_desc, "lineHeight").map(|pt_size| pt_size / size);
+  fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+    let families = strings_at_key(obj, "family")?;
+    let canonical = string_for_key(obj, "canonical")?;
+    let variant = string_for_key(obj, "variant")?;
+    let size = float_for_key(obj, "size")?;
+    let weight = Weight::from(float_for_key(obj, "weight")? as i32);
+    let slant = to_slant(string_for_key(obj, "style")?.as_str());
+    let width = to_width(string_for_key(obj, "stretch")?.as_str());
+    let line_height = opt_float_for_key(obj, "lineHeight").map(|pt_size| pt_size / size);
 
-//   let feat_obj: Handle<JsObject> = font_desc.get(cx, "features")?;
-//   let features = font_features(cx, &feat_obj)?;
+    let feat_obj = obj.getattr("features")?;
 
-//   Ok(match families[0] == "" {
-//     true => None, // silently fail if a family name was omitted (e.g., "bold 50px")
-//     false => Some(FontSpec {
-//       families,
-//       size,
-//       line_height,
-//       weight,
-//       slant,
-//       width,
-//       features,
-//       variant,
-//       canonical,
-//     }),
-//   })
-// }
+    match families[0] == "" {
+      true => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+        "Font family name cannot be empty",
+      )),
+      false => Ok(FontSpec {
+        families,
+        size,
+        line_height,
+        weight,
+        slant,
+        width,
+        features: font_features(&feat_obj)?,
+        variant,
+        canonical,
+      }),
+    }
+  }
+}
 
-// pub fn font_features(
-//   cx: &mut FunctionContext,
-//   obj: &Handle<JsObject>,
-// ) -> NeonResult<Vec<(String, i32)>> {
-//   let keys = obj.get_own_property_names(cx)?.to_vec(cx)?;
-//   let mut features: Vec<(String, i32)> = vec![];
-//   for key in strings_in(cx, &keys).iter() {
-//     match key.as_str() {
-//       "on" | "off" => strings_at_key(cx, obj, key)?.iter().for_each(|feat| {
-//         features.push((feat.to_string(), if key == "on" { 1 } else { 0 }));
-//       }),
-//       _ => features.push((key.to_string(), float_for_key(cx, obj, key)? as i32)),
-//     }
-//   }
-//   Ok(features)
-// }
-
-// pub fn typeface_details<'a>(
-//   cx: &mut FunctionContext<'a>,
-//   filename: &str,
-//   font: &Typeface,
-//   alias: Option<String>,
-// ) -> JsResult<'a, JsObject> {
-//   let style = font.font_style();
-
-//   let filename = cx.string(filename);
-//   let family = cx.string(match alias {
-//     Some(name) => name,
-//     None => font.family_name(),
-//   });
-//   let weight = cx.number(*style.weight() as f64);
-//   let slant = cx.string(from_slant(style.slant()));
-//   let width = cx.string(from_width(style.width()));
-
-//   let dict = JsObject::new(cx);
-//   let attr = cx.string("family");
-//   dict.set(cx, attr, family)?;
-//   let attr = cx.string("weight");
-//   dict.set(cx, attr, weight)?;
-//   let attr = cx.string("style");
-//   dict.set(cx, attr, slant)?;
-//   let attr = cx.string("width");
-//   dict.set(cx, attr, width)?;
-//   let attr = cx.string("file");
-//   dict.set(cx, attr, filename)?;
-//   Ok(dict)
-// }
+pub fn font_features(obj: &Bound<'_, PyAny>) -> PyResult<Vec<(String, i32)>> {
+  let dict = obj.cast::<PyMapping>()?;
+  let keys = dict
+    .keys()?
+    .iter()
+    .map(|k| k.extract::<String>())
+    .collect::<Result<Vec<String>, _>>()?;
+  let mut features: Vec<(String, i32)> = vec![];
+  for key in keys.iter() {
+    match key.as_str() {
+      "on" | "off" => strings_at_key_mapping(dict, key)?.iter().for_each(|feat| {
+        features.push((feat.to_string(), if key == "on" { 1 } else { 0 }));
+      }),
+      _ => features.push((key.to_string(), float_for_key_mapping(dict, key)? as i32)),
+    }
+  }
+  Ok(features)
+}
 
 #[pyclass]
 pub struct TypefaceDetails {
@@ -632,66 +611,69 @@ impl DecorationStyle {
   }
 }
 
-// pub fn decoration_arg(cx: &mut FunctionContext, idx: usize) -> NeonResult<Option<DecorationStyle>> {
-//   if let Some(deco) = opt_object_arg(cx, idx) {
-//     let css = string_for_key(cx, &deco, "str")?;
+impl FromPyObject<'_, '_> for DecorationStyle {
+  type Error = PyErr;
 
-//     let line = string_for_key(cx, &deco, "line")?;
-//     let ty = match line.as_str() {
-//       "underline" => TextDecoration::UNDERLINE,
-//       "overline" => TextDecoration::OVERLINE,
-//       "line-through" => TextDecoration::LINE_THROUGH,
-//       "none" | _ => return Ok(Some(DecorationStyle::default())),
-//     };
+  fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+    let css = string_for_key(obj, "text")?;
 
-//     let line_style = string_for_key(cx, &deco, "style")?;
-//     let style = match line_style.as_str() {
-//       "wavy" => TextDecorationStyle::Wavy,
-//       "dotted" => TextDecorationStyle::Dotted,
-//       "dashed" => TextDecorationStyle::Dashed,
-//       "double" => TextDecorationStyle::Double,
-//       "solid" | _ => TextDecorationStyle::Solid,
-//     };
+    let line = string_for_key(obj, "line")?;
+    let ty = match line.as_str() {
+      "underline" => TextDecoration::UNDERLINE,
+      "overline" => TextDecoration::OVERLINE,
+      "line-through" => TextDecoration::LINE_THROUGH,
+      "none" | _ => return Ok(DecorationStyle::default()),
+    };
 
-//     let color = match string_for_key(cx, &deco, "color")?.as_str() {
-//       "currentColor" => None,
-//       color_str => css_to_color(&color_str),
-//     };
+    let line_style = string_for_key(obj, "style")?;
+    let style = match line_style.as_str() {
+      "wavy" => TextDecorationStyle::Wavy,
+      "dotted" => TextDecorationStyle::Dotted,
+      "dashed" => TextDecorationStyle::Dashed,
+      "double" => TextDecorationStyle::Double,
+      "solid" | _ => TextDecorationStyle::Solid,
+    };
 
-//     let inherit = string_for_key(cx, &deco, "inherit")?;
-//     let size = match inherit.as_str() {
-//       "from-font" => None,
-//       _ => match opt_object_for_key(cx, &deco, "thickness") {
-//         Some(thickness) => Spacing::from_obj(cx, &thickness)?,
-//         _ => None,
-//       },
-//     };
+    let color = match string_for_key(obj, "color")?.as_str() {
+      "currentColor" => None,
+      color_str => css_to_color(&color_str),
+    };
 
-//     // if the setting is invalid, it should just be ignored
-//     if css.is_empty() || color.is_none() {
-//       return Ok(None);
-//     }
+    let inherit = string_for_key(obj, "inherit")?;
+    let size = match inherit.as_str() {
+      "from-font" => None,
+      _ => match obj.getattr("thickness").ok() {
+        Some(thickness) => Some(thickness.extract::<Spacing>()?),
+        _ => None,
+      },
+    };
 
-//     // As of skia_safe 0.78.2, `Gaps` mode is too buggy, with random breaks in places that don't have
-//     // descenders. It would be nice to enable this in a future release once it stabilizes…
-//     let mode = TextDecorationMode::Through;
+    // if the setting is invalid, it should just be ignored
+    if css.is_empty() || color.is_none() {
+      return Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
+        "Invalid text decoration(str or color)",
+      ));
+    }
 
-//     let decoration = Decoration {
-//       ty,
-//       style,
-//       mode,
-//       ..Decoration::default()
-//     };
-//     Ok(Some(DecorationStyle {
-//       decoration,
-//       size,
-//       color,
-//       css,
-//     }))
-//   } else {
-//     Ok(None)
-//   }
-// }
+    // As of skia_safe 0.78.2, `Gaps` mode is too buggy, with random breaks in places that don't have
+    // descenders. It would be nice to enable this in a future release once it stabilizes…
+    let mode = TextDecorationMode::Through;
+
+    let decoration = Decoration {
+      ty,
+      style,
+      mode,
+      ..Decoration::default()
+    };
+
+    Ok(DecorationStyle {
+      decoration,
+      size,
+      color,
+      css,
+    })
+  }
+}
 
 //
 // Em-relative lengths (for text spacing & decoration thickness)
@@ -710,6 +692,20 @@ impl Default for Spacing {
       unit: "px".to_string(),
       px_size: 0.0,
     }
+  }
+}
+
+impl FromPyObject<'_, '_> for Spacing {
+  type Error = PyErr;
+
+  fn extract(obj: Borrowed<'_, '_, PyAny>) -> Result<Self, Self::Error> {
+    let raw_size = float_for_key(obj, "size")?;
+    let unit = string_for_key(obj, "unit")?;
+    let px_size = float_for_key(obj, "px")?;
+
+    let ins = Self::parse(raw_size, unit, px_size)
+      .ok_or_else(|| PyErr::new::<pyo3::exceptions::PyValueError, _>("Invalid spacing"))?;
+    Ok(ins)
   }
 }
 
