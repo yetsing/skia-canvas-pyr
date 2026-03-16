@@ -159,3 +159,47 @@ class ImageDataExportSettings(TypedDict, total=False):
     color_space: ColorSpace
     # Color type to use when exporting in "raw" format
     color_type: ColorType
+
+
+class CanvasInitOptions(TypedDict, total=False):
+    text_contrast: float
+    text_gamma: float
+    gpu: bool
+
+
+class EngineDetails(TypedDict):
+    renderer: Literal["CPU", "GPU"]
+    api: Literal["Vulkan", "Metal"]
+    device: str
+    driver: str | None
+    threads: int
+    error: str | None
+    textContrast: float
+    textGamma: float
+
+
+class RenderOptions(TypedDict, total=False):
+    # Page to export: Defaults to 1 (i.e., first page)
+    page: float
+    # Background color to draw beneath transparent parts of the canvas
+    matte: str
+    # Number of pixels per grid ‘point’ (defaults to 1)
+    density: float
+    # Number of samples used for antialising each pixel
+    msaa: float | bool
+
+
+class ExportOptions(RenderOptions, total=False):
+    # Quality for lossy encodings like JPEG & WEBP (0.0–1.0)
+    quality: float
+    # Optionally convert text to bézier paths (SVG only)
+    outline: bool
+    # Optionally use 4:2:0 chroma subsampling (JPEG only)
+    downsample: bool
+    # Color type to use when exporting in "raw" format
+    color_type: ColorType
+
+
+class SaveOptions(ExportOptions, total=False):
+    # Image format to use (either as a file extension or a mime-type string)
+    format: ExportFormat

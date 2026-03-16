@@ -6,7 +6,11 @@ import dataclasses
 import math
 import re
 from collections.abc import Sequence
-from typing import cast, Any, List, Dict
+from typing import TYPE_CHECKING, cast
+
+if TYPE_CHECKING:
+    from typing import Any, List, Dict, Tuple
+    from ..skia_canvas_pyr import Spacing
 
 # -- Font & Variant --------------------------------------------------------------------
 #    https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant
@@ -38,6 +42,35 @@ class Font:
     family: List[str]
     features: Dict[str, float | List[str]]
     canonical: str
+
+
+@dataclasses.dataclass
+class FontVariant:
+    variant: str
+    features: Dict[str, float | List[str]]
+
+
+@dataclasses.dataclass
+class FontSpacing:
+    size: float
+    unit: str
+    px: float
+
+
+@dataclasses.dataclass
+class FontTextDecoration:
+    style: str
+    line: str
+    color: str
+    thickness: Spacing | None
+    inherit: str
+    text: str
+
+
+@dataclasses.dataclass
+class Filter:
+    canonical: str
+    filters: Dict[str, float | Tuple[float, float, float, str]]
 
 
 # endregion
@@ -292,7 +325,7 @@ def parseFlexibleSize(text):
             case "q":
                 unit_num = 96 / 25.4 / 4
         px = size * unit_num
-        return {"size": size, "unit": unit, "px": px}
+        return FontSpacing(size=size, unit=unit, px=px)
     return None
 
 
@@ -316,14 +349,14 @@ def parseWeight(text):
     return math.nan
 
 
-def parseVariant(text):
+def parseVariant(text) -> FontVariant | None:
     if text not in cache["variant"]:
         variants = []
         features: Dict[str, Any] = {"on": [], "off": []}
 
         for token in text.split():
             if token == "normal":
-                return {"variants": [token], "features": {"on": [], "off": []}}
+                return FontVariant(variant="normal", features={"on": [], "off": []})
             if token in featureMap:
                 for feat in featureMap[token]:
                     if feat and feat[0] == "-":
@@ -357,7 +390,9 @@ def parseVariant(text):
 
             raise ValueError(f'Invalid font variant "{token}"')
 
-        cache["variant"][text] = {"variant": " ".join(variants), "features": features}
+        cache["variant"][text] = FontVariant(
+            variant=" ".join(variants), features=features
+        )
 
     return cache["variant"].get(text)
 
@@ -386,14 +421,14 @@ def parseTextDecoration(text):
         elif token:
             color = token
 
-    return {
-        "style": style,
-        "line": line,
-        "color": color,
-        "thickness": thickness,
-        "inherit": inherit,
-        "str": text,
-    }
+    return FontTextDecoration(
+        style=style,
+        line=line,
+        color=color,
+        thickness=thickness,
+        inherit=inherit,
+        text=text,
+    )
 
 
 # -- Window Types -----------------------------------------------------------------------
@@ -545,16 +580,12 @@ def parseFilter(text):
                 filters[kind] = val
                 canonical.append(f"{kind}({arg.strip()})")
 
-    s = str(text).strip()
-    return (
-        {"canonical": "none", "filters": filters}
-        if s == "none"
-        else (
-            {"canonical": " ".join(canonical), "filters": filters}
-            if canonical
-            else None
-        )
-    )
+    if text.strip() == "none":
+        return Filter(canonical="none", filters=filters)
+    elif canonical:
+        return Filter(canonical=" ".join(canonical), filters=filters)
+    else:
+        return
 
 
 def parsePercentage(text):

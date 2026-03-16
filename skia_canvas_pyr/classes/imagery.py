@@ -121,8 +121,8 @@ class ImageData:
             # from Image
             image = args[0]
             option = args[1] if len(args) > 1 and args[1] else {}
-            color_space = option.get("colorSpace", "srgb")
-            color_type = option.get("colorType", "rgba")
+            color_space = option.get("color_space", "srgb")
+            color_type = option.get("color_type", "rgba")
             width = int(image.width)
             height = int(image.height)
             bytes_per_pixel = _pixel_size(color_type)
@@ -137,8 +137,8 @@ class ImageData:
             width = int(args[1])
             height = int(args[2]) if len(args) > 2 else 0
             option = args[3] if len(args) > 3 and args[3] else {}
-            color_space = option.get("colorSpace", "srgb")
-            color_type = option.get("colorType", "rgba")
+            color_space = option.get("color_space", "srgb")
+            color_type = option.get("color_type", "rgba")
             bytes_per_pixel = _pixel_size(color_type)
             if height == 0:
                 height = len(data) // (width * bytes_per_pixel)
@@ -150,8 +150,8 @@ class ImageData:
             width = int(args[0])
             height = int(args[1])
             option = args[2] if len(args) > 2 and args[2] else {}
-            color_space = option.get("colorSpace", "srgb")
-            color_type = option.get("colorType", "rgba")
+            color_space = option.get("color_space", "srgb")
+            color_type = option.get("color_type", "rgba")
             bytes_per_pixel = _pixel_size(color_type)
             data = bytearray(width * height * bytes_per_pixel)
 

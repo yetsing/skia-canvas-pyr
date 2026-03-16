@@ -1,3 +1,4 @@
+import dataclasses
 from typing import TYPE_CHECKING
 
 from ..skia_canvas_pyr import get_families, has, family, add_family, reset
@@ -48,3 +49,42 @@ class FontLibrary:
 
     def reset(self) -> None:
         reset()
+
+
+@dataclasses.dataclass(frozen=True)
+class TextMetrics:
+    """
+    The dimensions of a piece of text in the canvas, as created by the CanvasRenderingContext2D.measureText() method.
+
+    [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics)
+
+    Attributes:
+        actualBoundingBoxAscent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/actualBoundingBoxAscent)
+        actualBoundingBoxDescent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/actualBoundingBoxDescent)
+        actualBoundingBoxLeft: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/actualBoundingBoxLeft)
+        actualBoundingBoxRight: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/actualBoundingBoxRight)
+        alphabeticBaseline: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/alphabeticBaseline)
+        emHeightAscent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/emHeightAscent)
+        emHeightDescent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/emHeightDescent)
+        fontBoundingBoxAscent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/fontBoundingBoxAscent)
+        fontBoundingBoxDescent: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/fontBoundingBoxDescent)
+        hangingBaseline: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/hangingBaseline)
+        ideographicBaseline: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/ideographicBaseline)
+        width: [MDN Reference](https://developer.mozilla.org/docs/Web/API/TextMetrics/width)
+        lines: Individual metrics for each line (only applicable when context's textWrap is set to `true` )
+    """
+
+    actualBoundingBoxAscent: float
+    actualBoundingBoxDescent: float
+    actualBoundingBoxLeft: float
+    actualBoundingBoxRight: float
+    alphabeticBaseline: float
+    emHeightAscent: float
+    emHeightDescent: float
+    fontBoundingBoxAscent: float
+    fontBoundingBoxDescent: float
+    hangingBaseline: float
+    ideographicBaseline: float
+    width: float
+
+    lines: list[dict] | None = None

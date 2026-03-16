@@ -1,4 +1,8 @@
+import dataclasses
 import weakref
+import json
+import math
+import warnings
 
 from typing import TYPE_CHECKING
 
@@ -7,6 +11,7 @@ from .canvas import Canvas, CanvasGradient, CanvasPattern, CanvasTexture
 from .imagery import Image, ImageData
 from .geometry import fromSkMatrix, toSkMatrix, DOMMatrix
 from .path import Path2D
+from .typography import TextMetrics
 from ..skia_canvas_pyr import Context2D as Context2DRs
 
 if TYPE_CHECKING:
@@ -18,11 +23,26 @@ if TYPE_CHECKING:
         CanvasLineCap,
         CanvasLineDashFit,
         CanvasLineJoin,
+        CanvasDirection,
+        CanvasFontStretch,
+        CanvasTextAlign,
+        CanvasTextBaseline,
+        FontVariantSetting,
+        GlobalCompositeOperation,
         ImageSmoothingQuality,
         ImageDataSettings,
         ImageDataExportSettings,
     )
     from .geometry import Matrix, DOMPointInit
+
+
+@dataclasses.dataclass
+class ImageDataExportOptions:
+    color_type: str | None
+    color_space: str | None
+    matte: str | None
+    density: float | None
+    msaa: float | None
 
 
 class CanvasRenderingContext2D:
@@ -421,6 +441,355 @@ class CanvasRenderingContext2D:
     ) -> ImageData:
         settings = settings or {}
         color_type = settings.get("color_type", "rgba")
+        color_space = settings.get("color_space", "srgb")
+        density = settings.get("density", 1)
+        matte = settings.get("matte")
+        msaa = settings.get("msaa")
+
+        if (
+            not isinstance(density, (int, float))
+            or isinstance(density, bool)
+            or not float(density).is_integer()
+            or density < 1
+        ):
+            raise TypeError("Expected a non-negative integer for `density`")
+        density = int(density)
+
+        if msaa is None or msaa is True:
+            msaa = None
+        elif not math.isfinite(float(msaa)) or float(msaa) < 0:
+            raise TypeError("The number of MSAA samples must be an integer >=0")
+        else:
+            msaa = float(msaa)
+
+        opts = {
+            "color_type": color_type,
+            "color_space": color_space,
+            "density": int(density),
+            "matte": matte,
+            "msaa": msaa,
+        }
+
+        canvas = self.canvas
+        if canvas is None:
+            raise RuntimeError("Canvas context has been detached from canvas")
+
+        buffer = self.__context.get_image_data(
+            x, y, width, height, ImageDataExportOptions(**opts), canvas.core()
+        )
+        return ImageData(
+            buffer,
+            int(width) * density,
+            int(height) * density,
+            {
+                "color_type": color_type,
+                "color_space": color_space,
+            },
+        )
+
+    @overload
+    def putImageData(self, image_data: ImageData, x: float, y: float, /) -> None: ...
+    @overload
+    def putImageData(
+        self,
+        image_data: ImageData,
+        x: float,
+        y: float,
+        dirty_x: float,
+        dirty_y: float,
+        dirty_width: float,
+        dirty_height: float,
+        /,
+    ) -> None: ...
+
+    def putImageData(
+        self, image_data: ImageData, x: float, y: float, *args: float
+    ) -> None:
+        if not isinstance(image_data, ImageData):
+            raise TypeError("Expected an ImageData as 1st arg")
+        self.__context.put_image_data(image_data, x, y, args)
+
+    @overload
+    def drawImage(
+        self, image: Image | Canvas | ImageData, dx: float, dy: float, /
+    ) -> None: ...
+    @overload
+    def drawImage(
+        self,
+        image: Image | Canvas | ImageData,
+        dx: float,
+        dy: float,
+        dw: float,
+        dh: float,
+        /,
+    ) -> None: ...
+    @overload
+    def drawImage(
+        self,
+        image: Image | Canvas | ImageData,
+        sx: float,
+        sy: float,
+        sw: float,
+        sh: float,
+        dx: float,
+        dy: float,
+        dw: float,
+        dh: float,
+        /,
+    ) -> None: ...
+
+    def drawImage(self, image: Image | Canvas | ImageData, *coords: float) -> None:
+        if isinstance(image, Canvas):
+            source = image.getContext("2d")
+            if source is None:
+                raise TypeError("Expected an Image or a Canvas argument")
+            self.__context.draw_image(source.core(), coords)
+        elif isinstance(image, Image):
+            if image.complete:
+                self.__context.draw_image(image.core(), coords)
+            else:
+                raise ValueError(
+                    "Image has not completed loading: await loading before drawing"
+                )
+        elif isinstance(image, ImageData):
+            self.__context.draw_image(image, coords)
+        else:
+            raise TypeError(
+                f"Expected an Image or a Canvas argument (got: {type(image).__name__})"
+            )
+
+    @overload
+    def drawCanvas(self, image: Canvas, dx: float, dy: float, /) -> None: ...
+    @overload
+    def drawCanvas(
+        self,
+        image: Canvas,
+        dx: float,
+        dy: float,
+        dw: float,
+        dh: float,
+        /,
+    ) -> None: ...
+    @overload
+    def drawCanvas(
+        self,
+        image: Canvas,
+        sx: float,
+        sy: float,
+        sw: float,
+        sh: float,
+        dx: float,
+        dy: float,
+        dw: float,
+        dh: float,
+        /,
+    ) -> None: ...
+
+    def drawCanvas(self, image: Canvas, *coords: float) -> None:
+        if isinstance(image, Canvas):
+            source = image.getContext("2d")
+            if source is None:
+                raise TypeError("Expected an Image or a Canvas argument")
+            self.__context.draw_canvas(source.core(), coords)
+        else:
+            self.drawImage(image, *coords)
+
+    # -- typography ------------------------------------------------------------
+    @property
+    def font(self) -> str:
+        return self.__context.get_font()
+
+    @font.setter
+    def font(self, value: str) -> None:
+        parsed = css.font(value)
+        if parsed is not None:
+            self.__context.set_font(parsed)
+
+    @property
+    def textAlign(self) -> CanvasTextAlign:
+        return self.__context.get_text_align()  # type: ignore
+
+    @textAlign.setter
+    def textAlign(self, value: str) -> None:
+        self.__context.set_text_align(value)
+
+    @property
+    def textBaseline(self) -> CanvasTextBaseline:
+        return self.__context.get_text_baseline()  # type: ignore
+
+    @textBaseline.setter
+    def textBaseline(self, value: str) -> None:
+        self.__context.set_text_baseline(value)
+
+    @property
+    def direction(self) -> CanvasDirection:
+        return self.__context.get_direction()  # type: ignore
+
+    @direction.setter
+    def direction(self, value: str) -> None:
+        self.__context.set_direction(value)
+
+    @property
+    def fontStretch(self) -> CanvasFontStretch:
+        return self.__context.get_font_stretch()  # type: ignore
+
+    @fontStretch.setter
+    def fontStretch(self, value: str) -> None:
+        parsed = css.stretch(value)
+        if parsed is not None:
+            self.__context.set_font_stretch(parsed)
+
+    @property
+    def letterSpacing(self) -> str:
+        return self.__context.get_letter_spacing()
+
+    @letterSpacing.setter
+    def letterSpacing(self, value: str) -> None:
+        parsed = css.spacing(value)
+        if parsed is not None:
+            self.__context.set_letter_spacing(parsed)
+
+    @property
+    def wordSpacing(self) -> str:
+        return self.__context.get_word_spacing()
+
+    @wordSpacing.setter
+    def wordSpacing(self, value: str) -> None:
+        parsed = css.spacing(value)
+        if parsed is not None:
+            self.__context.set_word_spacing(parsed)
+
+    def measureText(self, text: str, max_width: float | None = None) -> TextMetrics:
+        metrics = self.__context.measure_text(str(text), max_width)
+        v = json.loads(metrics)
+        return TextMetrics(**v)
+
+    def fillText(
+        self, text: str, x: float, y: float, max_width: float | None = None
+    ) -> None:
+        self.__context.fill_text(text, x, y, max_width)
+
+    def strokeText(
+        self, text: str, x: float, y: float, max_width: float | None = None
+    ) -> None:
+        self.__context.stroke_text(text, x, y, max_width)
+
+    def outlineText(self, text: str, max_width: float | None = None) -> Path2D:
+        path = self.__context.outline_text(text, max_width)
+        return Path2D(path)
+
+    # -- non-standard typography extensions -----------------------------------
+    @property
+    def fontHinting(self) -> bool:
+        return self.__context.get_font_hinting()
+
+    @fontHinting.setter
+    def fontHinting(self, flag: bool) -> None:
+        self.__context.set_font_hinting(flag)
+
+    @property
+    def fontVariant(self) -> FontVariantSetting:
+        return self.__context.get_font_variant()  # type: ignore
+
+    @fontVariant.setter
+    def fontVariant(self, value: str) -> None:
+        parsed = css.variant(value)
+        if parsed is not None:
+            self.__context.set_font_variant(parsed)
+
+    @property
+    def textWrap(self) -> bool:
+        return self.__context.get_text_wrap()
+
+    @textWrap.setter
+    def textWrap(self, flag: bool) -> None:
+        self.__context.set_text_wrap(flag)
+
+    @property
+    def textDecoration(self) -> str:
+        return self.__context.get_text_decoration()
+
+    @textDecoration.setter
+    def textDecoration(self, value: str) -> None:
+        parsed = css.decoration(value)
+        if parsed is not None:
+            self.__context.set_text_decoration(parsed)
+
+    @property
+    def textTracking(self) -> None:
+        return None
+
+    @textTracking.setter
+    def textTracking(self, _value) -> None:
+        warnings.warn(
+            "The .textTracking property has been removed; use .letterSpacing instead",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+    # -- effects ---------------------------------------------------------------
+    @property
+    def globalCompositeOperation(self) -> GlobalCompositeOperation:
+        return self.__context.get_global_composite_operation()  # type: ignore
+
+    @globalCompositeOperation.setter
+    def globalCompositeOperation(self, blend: str) -> None:
+        self.__context.set_global_composite_operation(blend)
+
+    @property
+    def globalAlpha(self) -> float:
+        return self.__context.get_global_alpha()
+
+    @globalAlpha.setter
+    def globalAlpha(self, alpha: float) -> None:
+        self.__context.set_global_alpha(alpha)
+
+    @property
+    def shadowBlur(self) -> float:
+        return self.__context.get_shadow_blur()
+
+    @shadowBlur.setter
+    def shadowBlur(self, value: float) -> None:
+        self.__context.set_shadow_blur(value)
+
+    @property
+    def shadowColor(self) -> str:
+        return self.__context.get_shadow_color()
+
+    @shadowColor.setter
+    def shadowColor(self, value: str) -> None:
+        self.__context.set_shadow_color(value)
+
+    @property
+    def shadowOffsetX(self) -> float:
+        return self.__context.get_shadow_offset_x()
+
+    @shadowOffsetX.setter
+    def shadowOffsetX(self, value: float) -> None:
+        self.__context.set_shadow_offset_x(value)
+
+    @property
+    def shadowOffsetY(self) -> float:
+        return self.__context.get_shadow_offset_y()
+
+    @shadowOffsetY.setter
+    def shadowOffsetY(self, value: float) -> None:
+        self.__context.set_shadow_offset_y(value)
+
+    @property
+    def filter(self) -> str:
+        return self.__context.get_filter()
+
+    @filter.setter
+    def filter(self, value: str) -> None:
+        parsed = css.filter(value)
+        if parsed is not None:
+            self.__context.set_filter(parsed)
+
+    def reset_size(self) -> None:
+        canvas = self.canvas
+        if canvas is not None:
+            self.__context.reset_size(canvas.core())
 
     def core(self) -> Context2DRs:
         return self.__context

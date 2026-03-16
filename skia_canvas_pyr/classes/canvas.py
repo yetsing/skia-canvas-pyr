@@ -19,50 +19,18 @@ from .imagery import Image, ImageData, _pixel_size
 from .geometry import toSkMatrix
 
 if TYPE_CHECKING:
-    from typing import Any, TypeAlias, Literal, List, Tuple, overload, TypedDict
-    from .sc_type import ColorType, ExportFormat, CanvasLineCap, Offset
+    from typing import Literal, List, overload, TypedDict
+    from .sc_type import (
+        CanvasLineCap,
+        Offset,
+        CanvasInitOptions,
+        ExportOptions,
+        SaveOptions,
+        EngineDetails,
+    )
     from .context import CanvasRenderingContext2D
     from .geometry import Matrix
     from .path import Path2D
-
-    class CanvasInitOptions(TypedDict, total=False):
-        text_contrast: float
-        text_gamma: float
-        gpu: bool
-
-    class EngineDetails(TypedDict):
-        renderer: Literal["CPU", "GPU"]
-        api: Literal["Vulkan", "Metal"]
-        device: str
-        driver: str | None
-        threads: int
-        error: str | None
-        textContrast: float
-        textGamma: float
-
-    class RenderOptions(TypedDict, total=False):
-        # Page to export: Defaults to 1 (i.e., first page)
-        page: float
-        # Background color to draw beneath transparent parts of the canvas
-        matte: str
-        # Number of pixels per grid ‘point’ (defaults to 1)
-        density: float
-        # Number of samples used for antialising each pixel
-        msaa: float | bool
-
-    class ExportOptions(RenderOptions, total=False):
-        # Quality for lossy encodings like JPEG & WEBP (0.0–1.0)
-        quality: float
-        # Optionally convert text to bézier paths (SVG only)
-        outline: bool
-        # Optionally use 4:2:0 chroma subsampling (JPEG only)
-        downsample: bool
-        # Color type to use when exporting in "raw" format
-        color_type: ColorType
-
-    class SaveOptions(ExportOptions, total=False):
-        # Image format to use (either as a file extension or a mime-type string)
-        format: ExportFormat
 
 
 class Canvas:
@@ -78,6 +46,8 @@ class Canvas:
             opt.get("gpu", True),
         )
         self.__contexts: List[CanvasRenderingContext2D] = []
+        self.width = width
+        self.height = height
 
     def getContext(self, kind: Literal["2d"]):
         if kind == "2d":
@@ -103,7 +73,7 @@ class Canvas:
     def width(self, value: float) -> None:
         self.__canvas.set_width(value)
         if self.__contexts:
-            pass  # TODO: resize contexts
+            self.__contexts[0].reset_size()
 
     @property
     def height(self) -> float:
@@ -113,7 +83,7 @@ class Canvas:
     def height(self, value: float) -> None:
         self.__canvas.set_height(value)
         if self.__contexts:
-            pass  # TODO: resize contexts
+            self.__contexts[0].reset_size()
 
     def newPage(self, *args: float) -> CanvasRenderingContext2D:
         from .context import CanvasRenderingContext2D
@@ -121,9 +91,7 @@ class Canvas:
         ctx = CanvasRenderingContext2D(self)
         self.__contexts.insert(0, ctx)
         if args:
-            width, heigth = args
-            self.width = width
-            self.height = heigth
+            self.width, self.height = args
         return ctx
 
     @property
