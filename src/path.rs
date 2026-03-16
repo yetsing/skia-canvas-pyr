@@ -5,7 +5,7 @@ use skia_safe::{
   Matrix, Path, PathBuilder, PathDirection, PathFillType, PathOp, Point, RRect, Rect, StrokeRec,
 };
 use skia_safe::{PathEffect, trim_path_effect};
-use std::f32::{EPSILON, consts::PI};
+use std::f32::consts::PI;
 
 use crate::utils::{to_degrees, to_matrix};
 
@@ -88,10 +88,10 @@ impl Path2D {
       let start_deg = (to_degrees(start_angle) * 10000.0).round() / 10000.0;
 
       // draw 360° ellipses in two 180° segments; trying to draw the full ellipse at once draws nothing.
-      if sweep_deg >= 360.0 - EPSILON {
+      if sweep_deg >= 360.0 - f32::EPSILON {
         self.path.arc_to(oval, start_deg, 180.0, false);
         self.path.arc_to(oval, start_deg + 180.0, 180.0, false);
-      } else if sweep_deg <= -360.0 + EPSILON {
+      } else if sweep_deg <= -360.0 + f32::EPSILON {
         self.path.arc_to(oval, start_deg, -180.0, false);
         self.path.arc_to(oval, start_deg - 180.0, -180.0, false);
       } else {
@@ -103,6 +103,7 @@ impl Path2D {
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[pymethods]
 impl Path2D {
   #[new]
@@ -370,10 +371,10 @@ impl Path2D {
     let bounds = self.path.bounds();
     let stroke_rec = StrokeRec::new_hairline();
 
-    if let Some(rounder) = PathEffect::corner_path(radius) {
-      if let Some((path, _)) = rounder.filter_path(&self.path, &stroke_rec, bounds) {
-        return Self::from(path);
-      }
+    if let Some(rounder) = PathEffect::corner_path(radius)
+      && let Some((path, _)) = rounder.filter_path(&self.path, &stroke_rec, bounds)
+    {
+      return Self::from(path);
     }
 
     Self {
@@ -393,10 +394,10 @@ impl Path2D {
       trim_path_effect::Mode::Normal
     };
 
-    if let Some(trimmer) = PathEffect::trim(begin, end, mode) {
-      if let Some((path, _)) = trimmer.filter_path(&self.path, &stroke_rect, bounds) {
-        return Self::from(path);
-      }
+    if let Some(trimmer) = PathEffect::trim(begin, end, mode)
+      && let Some((path, _)) = trimmer.filter_path(&self.path, &stroke_rect, bounds)
+    {
+      return Self::from(path);
     }
 
     Self {
@@ -411,10 +412,10 @@ impl Path2D {
     let bounds = self.path.bounds();
     let stroke_rect = StrokeRec::new_hairline();
 
-    if let Some(trimmer) = PathEffect::discrete(segment_length, variance, Some(seed)) {
-      if let Some((path, _)) = trimmer.filter_path(&self.path, &stroke_rect, bounds) {
-        return Self::from(path);
-      }
+    if let Some(trimmer) = PathEffect::discrete(segment_length, variance, Some(seed))
+      && let Some((path, _)) = trimmer.filter_path(&self.path, &stroke_rect, bounds)
+    {
+      return Self::from(path);
     }
 
     Self {

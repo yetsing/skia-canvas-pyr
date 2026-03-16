@@ -108,7 +108,7 @@ impl CanvasPattern {
     };
 
     let content = Content::from_image_data(src);
-    let dims: Size = content.size().into();
+    let dims: Size = content.size();
     let matrix = Matrix::new_identity();
 
     let stamp = Stamp {

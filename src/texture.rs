@@ -91,6 +91,7 @@ impl CanvasTexture {
   }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[pymethods]
 impl CanvasTexture {
   #[new]
@@ -107,7 +108,7 @@ impl CanvasTexture {
     color: Option<&str>,
   ) -> PyResult<Self> {
     let path = path.map(|p| p.path.clone());
-    let color = color.and_then(|c| css_to_color(c)).unwrap_or(Color::BLACK);
+    let color = color.and_then(css_to_color).unwrap_or(Color::BLACK);
     let cap = match to_stroke_cap(cap) {
       Some(style) => style,
       None => {

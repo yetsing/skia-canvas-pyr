@@ -4,6 +4,7 @@ mod canvas;
 mod context;
 mod filter;
 mod font_library;
+#[allow(clippy::all)]
 mod gpu;
 mod gradient;
 mod image;

@@ -71,12 +71,12 @@ impl FontLibrary {
           let has_config = fs::exists(Path::new("/etc/fonts/fonts.conf")).unwrap_or(false);
           let has_override = std::env::var_os("FONTCONFIG_PATH").is_some()
             || std::env::var_os("FONTCONFIG_FILE").is_some();
-          if !(has_config || has_override) {
-            if let Some(mut fallback_config_path) = process_path::get_dylib_path() {
-              fallback_config_path.set_file_name("fonts");
-              unsafe {
-                std::env::set_var("FONTCONFIG_PATH", fallback_config_path);
-              }
+          if !(has_config || has_override)
+            && let Some(mut fallback_config_path) = process_path::get_dylib_path()
+          {
+            fallback_config_path.set_file_name("fonts");
+            unsafe {
+              std::env::set_var("FONTCONFIG_PATH", fallback_config_path);
             }
           }
         }

@@ -27,24 +27,20 @@ impl Default for Image {
   }
 }
 
+#[derive(Default)]
 pub enum Content {
   Bitmap(SkImage),
   Vector(Picture, Size),
+  #[default]
   Loading,
   Broken,
-}
-
-impl Default for Content {
-  fn default() -> Self {
-    Content::Loading
-  }
 }
 
 impl Clone for Content {
   fn clone(&self) -> Self {
     match self {
       Content::Bitmap(img) => Content::Bitmap(img.clone()),
-      Content::Vector(pict, size) => Content::Vector(pict.clone(), size.clone()),
+      Content::Vector(pict, size) => Content::Vector(pict.clone(), *size),
       _ => Content::default(),
     }
   }
@@ -56,7 +52,7 @@ impl Content {
       true => ctx
         .get_picture()
         .map(|p| Content::Vector(p, ctx.bounds.size())),
-      false => ctx.get_image().map(|i| Content::Bitmap(i)),
+      false => ctx.get_image().map(Content::Bitmap),
     }
     .unwrap_or_default()
   }
@@ -64,7 +60,7 @@ impl Content {
   pub fn from_image_data(image_data: ImageData) -> Self {
     let info = image_data.image_info();
     images::raster_from_data(&info, &image_data.buffer, info.min_row_bytes())
-      .map(|image| Content::Bitmap(image))
+      .map(Content::Bitmap)
       .unwrap_or_default()
   }
 

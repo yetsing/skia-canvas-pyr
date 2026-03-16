@@ -29,10 +29,9 @@ impl Canvas {
   }
 
   pub fn engine(&mut self) -> gpu::RenderingEngine {
-    self
+    *self
       .engine
-      .get_or_insert_with(|| gpu::RenderingEngine::default())
-      .clone()
+      .get_or_insert_with(gpu::RenderingEngine::default)
   }
 
   pub fn export_options(&self) -> ExportOptions {
@@ -117,11 +116,11 @@ impl Canvas {
   }
 
   pub fn set_engine(&mut self, engine_name: String) {
-    if let Some(new_engine) = to_engine(&engine_name) {
-      if new_engine.selectable() {
-        self.gpu_disabled = matches!(new_engine, gpu::RenderingEngine::CPU);
-        self.engine = Some(new_engine)
-      }
+    if let Some(new_engine) = to_engine(&engine_name)
+      && new_engine.selectable()
+    {
+      self.gpu_disabled = matches!(new_engine, gpu::RenderingEngine::CPU);
+      self.engine = Some(new_engine)
     }
   }
 
@@ -132,7 +131,8 @@ impl Canvas {
     details.to_string()
   }
 
-  pub fn to_buffer_sync(
+  #[pyo3(name = "to_buffer_sync")]
+  pub fn py_to_buffer_sync(
     &mut self,
     pages: Vec<PyRef<Context2D>>,
     options: ExportOptions,

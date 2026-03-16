@@ -113,7 +113,7 @@ impl PageRecorder {
     // return an empty buffer if the requested rect is entirely outside the canvas
     let dst_info = ImageInfo::new(
       (crop.width(), crop.height()),
-      opts.color_type.clone(),
+      opts.color_type,
       AlphaType::Unpremul,
       opts.color_space.clone(),
     );
@@ -137,7 +137,7 @@ impl PageRecorder {
   pub fn get_page(&mut self) -> Page {
     if self.changed {
       // store layer as a drawable (so copies are deduplicated) wrapped in a picture (so it can be sent to other threads)
-      self
+      if let Some(pict) = self
         .current
         .finish_recording_as_drawable()
         .and_then(|mut drawable| {
@@ -147,7 +147,9 @@ impl PageRecorder {
             .draw_drawable(&mut drawable, None);
           wrapper.finish_recording_as_picture(None)
         })
-        .map(|pict| self.layers.push(pict));
+      {
+        self.layers.push(pict);
+      }
 
       // resume recording
       self.current.begin_recording(self.bounds, true);
@@ -166,8 +168,8 @@ impl PageRecorder {
     // update the PageCache with the surface bitmap (if it's valid for this export)
     let page = self.get_page();
     if opts.is_raster() {
-      if let Some(image) = self.surface.snapshot_if_valid(&page, &opts, &engine) {
-        PageCache::set(self.id, image, &opts, self.surface.depth);
+      if let Some(image) = self.surface.snapshot_if_valid(&page, opts, engine) {
+        PageCache::set(self.id, image, opts, self.surface.depth);
       }
     }
     page
@@ -250,8 +252,8 @@ impl RecordingSurface {
 
   pub fn update(&mut self, page: &Page, opts: &ExportOptions, engine: &RenderingEngine) {
     // check for anything that would invalidate the previous contents
-    let reconfigure = self.is_config_stale(&opts);
-    let recreate = self.is_surface_stale(&page, &opts, &engine);
+    let reconfigure = self.is_config_stale(opts);
+    let recreate = self.is_surface_stale(page, opts, engine);
 
     // start from scratch if invalidated
     if reconfigure || recreate {
@@ -266,13 +268,13 @@ impl RecordingSurface {
       if recreate {
         let page_size = page.scaled_dimensions(opts.density);
         let img_info = ImageInfo::new_n32_premul(page_size, opts.color_space.clone());
-        self.surface = engine.make_surface(&img_info, &opts).ok();
+        self.surface = engine.make_surface(&img_info, opts).ok();
       }
     }
 
     if let Some(surface) = self.surface.as_mut() {
       let canvas = surface.canvas();
-      let (cache_image, cache_depth) = PageCache::get(page.id, &opts, page.depth());
+      let (cache_image, cache_depth) = PageCache::get(page.id, opts, page.depth());
 
       if let Some(image) = cache_image {
         // use the cached bitmap as the background (if present)
@@ -300,8 +302,8 @@ impl RecordingSurface {
     opts: &ExportOptions,
     engine: &RenderingEngine,
   ) -> Option<SkImage> {
-    match !(self.is_config_stale(&opts)
-      || self.is_surface_stale(&page, &opts, &engine)
+    match !(self.is_config_stale(opts)
+      || self.is_surface_stale(page, opts, engine)
       || self.depth == 0)
     {
       true => self
@@ -605,7 +607,7 @@ impl PageSequence {
       return;
     }
     for page in self.pages.iter_mut() {
-      PageCache::materialize(page.id, &engine, &options);
+      PageCache::materialize(page.id, engine, options);
     }
   }
 
@@ -759,7 +761,7 @@ impl PageCache {
   ) -> Option<bool> {
     self.image.as_ref().map(|image| {
       image.read_pixels(
-        &dst_info,
+        dst_info,
         pixels,
         dst_info.min_row_bytes(),
         (src.x(), src.y()),
@@ -780,7 +782,7 @@ impl PageCache {
     self.image.as_ref().map(|image| {
       image.read_pixels_with_context(
         context,
-        &dst_info,
+        dst_info,
         pixels,
         dst_info.min_row_bytes(),
         (src.x(), src.y()),

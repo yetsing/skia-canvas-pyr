@@ -1,12 +1,9 @@
 #![allow(dead_code)]
-use core::ops::Range;
 use css_color::Rgba;
 use pyo3::prelude::*;
-use pyo3::types::{PyList, PyMapping, PySequence, PyTuple};
-use rayon::result;
-use skia_safe::{Color, Data, Matrix, Path, Point, RGB};
+use pyo3::types::{PyMapping, PySequence, PyTuple};
+use skia_safe::{Color, Matrix, Point, RGB};
 use std::f32::consts::PI;
-use std::{cmp, num};
 
 /* #region meta-helpers */
 
@@ -115,7 +112,7 @@ pub fn css_to_color(css: &str) -> Option<Color> {
 
 pub fn color_to_css(color: &Color) -> String {
   let RGB { r, g, b } = color.to_rgb();
-  let css = match color.a() {
+  match color.a() {
     255 => format!("#{:02x}{:02x}{:02x}", r, g, b),
     _ => {
       let alpha = format!("{:.3}", color.a() as f32 / 255.0);
@@ -128,8 +125,7 @@ pub fn color_to_css(color: &Color) -> String {
         if alpha == "0." { "0" } else { alpha }
       )
     }
-  };
-  css
+  }
 }
 
 /* #endregion */
@@ -153,7 +149,7 @@ pub fn to_matrix(t: &[f32]) -> Option<Matrix> {
 /* #region Points */
 
 pub fn to_points(nums: Vec<f32>) -> Option<Vec<Point>> {
-  if nums.len() % 2 != 0 {
+  if !nums.len().is_multiple_of(2) {
     return None;
   }
   let points = nums
@@ -168,7 +164,7 @@ pub fn to_points(nums: Vec<f32>) -> Option<Vec<Point>> {
 
 /* #region Image & ImageData */
 
-use skia_safe::{AlphaType, ColorSpace, ColorType, ImageInfo};
+use skia_safe::{ColorSpace, ColorType};
 
 pub struct ImageDataExportArg {
   pub color_type: ColorType,
@@ -210,18 +206,21 @@ pub fn image_data_export_arg(arg: Option<ImageDataExportArg>) -> ImageDataExport
   }
 }
 
-pub fn to_color_space(mode_name: &str) -> ColorSpace {
-  match mode_name {
-    // TODO: add display-p3 support
-    "srgb" | _ => ColorSpace::new_srgb(),
-  }
+pub fn to_color_space(_: &str) -> ColorSpace {
+  // TODO: add display-p3 support
+  // match mode_name {
+  //   "srgb" | _ => ColorSpace::new_srgb(),
+  // }
+  ColorSpace::new_srgb()
 }
 
-pub fn from_color_space(mode: ColorSpace) -> String {
-  match mode {
-    _ => "srgb",
-  }
-  .to_string()
+pub fn from_color_space(_: ColorSpace) -> String {
+  // TODO: add display-p3 support
+  // match mode {
+  //   _ => "srgb",
+  // }
+  // .to_string()
+  "srgb".to_string()
 }
 
 pub fn to_color_type(type_name: &str) -> ColorType {
@@ -248,7 +247,8 @@ pub fn to_color_type(type_name: &str) -> ColorType {
     "N32" => ColorType::N32,
     "RGB888x" | "rgb" => ColorType::RGB888x,
     "BGRA8888" | "bgra" => ColorType::BGRA8888,
-    "RGBA8888" | "rgba" | _ => ColorType::RGBA8888,
+    "RGBA8888" | "rgba" => ColorType::RGBA8888,
+    _ => ColorType::RGBA8888,
   }
 }
 
@@ -527,7 +527,7 @@ pub fn to_fill_rule(rule_name: &str) -> Option<PathFillType> {
   match rule_name {
     "nonzero" => Some(PathFillType::Winding),
     "evenodd" => Some(PathFillType::EvenOdd),
-    _ => return None,
+    _ => None,
   }
 }
 

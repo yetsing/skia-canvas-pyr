@@ -19,6 +19,7 @@ use crate::utils::*;
 // The py interface for the Context2D struct
 //
 
+#[allow(clippy::too_many_arguments)]
 #[pymethods]
 impl Context2D {
   #[new]
@@ -417,10 +418,11 @@ impl Context2D {
   }
 
   pub fn get_line_dash_marker(&self) -> Option<Path2D> {
-    match &self.state.line_dash_marker {
-      Some(path) => Some(Path2D { path: path.clone() }),
-      None => None,
-    }
+    self
+      .state
+      .line_dash_marker
+      .as_ref()
+      .map(|path| Path2D { path: path.clone() })
   }
 
   pub fn set_line_dash_fit(&mut self, fit_style: String) {
@@ -510,7 +512,7 @@ impl Context2D {
       let (src, dst) = _layout_rects(bounds_size, &nums)?;
 
       content.snap_rects_to_bounds(src, dst);
-      self.draw_image(&img, &src, &dst);
+      self.draw_image(img, &src, &dst);
     } else if let Content::Vector(pict, pict_size) = &content {
       let (mut src, mut dst) = _layout_rects(*pict_size, &nums)?;
 
@@ -532,7 +534,7 @@ impl Context2D {
       }
 
       content.snap_rects_to_bounds(src, dst);
-      self.draw_picture(&pict, &src, &dst);
+      self.draw_picture(pict, &src, &dst);
     }
 
     Ok(())
@@ -543,7 +545,7 @@ impl Context2D {
     if let Content::Vector(pict, size) = &content {
       let (src, dst) = _layout_rects(*size, &nums)?;
       let (src, dst) = content.snap_rects_to_bounds(src, dst);
-      self.draw_picture(&pict, &src, &dst);
+      self.draw_picture(pict, &src, &dst);
       Ok(())
     } else {
       Err(pyo3::exceptions::PyRuntimeError::new_err(
@@ -597,7 +599,7 @@ impl Context2D {
 
     let data = self
       .get_pixels(crop, opts, engine)
-      .or_else(|e| Err(pyo3::exceptions::PyRuntimeError::new_err(e)))?;
+      .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
 
     Ok(data)
   }

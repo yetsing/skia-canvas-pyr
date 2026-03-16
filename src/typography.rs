@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+#![allow(non_snake_case)]
 use pyo3::prelude::*;
 use pyo3::types::PyMapping;
 use serde_json::{Value, json};
@@ -8,7 +10,7 @@ use skia_safe::textlayout::{
   TextDirection, TextStyle,
 };
 use skia_safe::{Color, FontMetrics, Paint, Path as SkPath, Point, Rect, Typeface};
-use std::f64::consts::E;
+use std::fmt;
 use std::iter::zip;
 use std::ops::Range;
 
@@ -359,7 +361,7 @@ impl FromPyObject<'_, '_> for FontSpec {
 
     let feat_obj = obj.getattr("features")?;
 
-    match families[0] == "" {
+    match families[0].is_empty() {
       true => Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(
         "Font family name cannot be empty",
       )),
@@ -622,7 +624,8 @@ impl FromPyObject<'_, '_> for DecorationStyle {
       "underline" => TextDecoration::UNDERLINE,
       "overline" => TextDecoration::OVERLINE,
       "line-through" => TextDecoration::LINE_THROUGH,
-      "none" | _ => return Ok(DecorationStyle::default()),
+      "none" => return Ok(DecorationStyle::default()),
+      _ => return Ok(DecorationStyle::default()),
     };
 
     let line_style = string_for_key(obj, "style")?;
@@ -631,12 +634,13 @@ impl FromPyObject<'_, '_> for DecorationStyle {
       "dotted" => TextDecorationStyle::Dotted,
       "dashed" => TextDecorationStyle::Dashed,
       "double" => TextDecorationStyle::Double,
-      "solid" | _ => TextDecorationStyle::Solid,
+      "solid" => TextDecorationStyle::Solid,
+      _ => TextDecorationStyle::Solid,
     };
 
     let color = match string_for_key(obj, "color")?.as_str() {
       "currentColor" => None,
-      color_str => css_to_color(&color_str),
+      color_str => css_to_color(color_str),
     };
 
     let inherit = string_for_key(obj, "inherit")?;
@@ -710,16 +714,6 @@ impl FromPyObject<'_, '_> for Spacing {
 }
 
 impl Spacing {
-  //   pub fn from_obj(
-  //     cx: &mut FunctionContext,
-  //     spacing: &Handle<JsObject>,
-  //   ) -> NeonResult<Option<Self>> {
-  //     let raw_size = float_for_key(cx, &spacing, "size")?;
-  //     let unit = string_for_key(cx, &spacing, "unit")?;
-  //     let px_size = float_for_key(cx, &spacing, "px")?;
-  //     Ok(Self::parse(raw_size, unit, px_size))
-  //   }
-
   pub fn parse(raw_size: f32, unit: String, px_size: f32) -> Option<Self> {
     let main_size = match unit.as_str() {
       "em" | "rem" => raw_size,
@@ -742,21 +736,10 @@ impl Spacing {
       _ => self.px_size,
     }
   }
-
-  pub fn to_string(&self) -> String {
-    format!("{}{}", self.raw_size, self.unit)
-  }
 }
 
-// pub fn opt_spacing_arg<'a>(
-//   cx: &mut FunctionContext<'a>,
-//   idx: usize,
-// ) -> NeonResult<Option<Spacing>> {
-//   match cx.argument::<JsValue>(idx)?.is_a::<JsNull, _>(cx) {
-//     true => Ok(None),
-//     false => {
-//       let spacing = cx.argument::<JsObject>(idx)?;
-//       Spacing::from_obj(cx, &spacing)
-//     }
-//   }
-// }
+impl fmt::Display for Spacing {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    write!(f, "{}{}", self.raw_size, self.unit)
+  }
+}

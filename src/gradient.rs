@@ -159,10 +159,9 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    let canvas_gradient = CanvasGradient {
+    CanvasGradient {
       gradient: Rc::new(RefCell::new(ramp)),
-    };
-    canvas_gradient
+    }
   }
 
   #[staticmethod]
@@ -177,10 +176,9 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    let canvas_gradient = CanvasGradient {
+    CanvasGradient {
       gradient: Rc::new(RefCell::new(bloom)),
-    };
-    canvas_gradient
+    }
   }
 
   #[staticmethod]
@@ -193,10 +191,9 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    let canvas_gradient = CanvasGradient {
+    CanvasGradient {
       gradient: Rc::new(RefCell::new(swirl)),
-    };
-    canvas_gradient
+    }
   }
 
   #[pyo3(name = "add_color_stop")]
