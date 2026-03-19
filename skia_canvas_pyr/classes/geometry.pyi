@@ -23,11 +23,19 @@ from typing import (
 # Geometry
 #
 
-class DOMPointInit(Protocol):
+class DOMPointInit1(Protocol):
     x: float
     y: float
     z: float
     w: float
+
+class DOMPointInit2(TypedDict):
+    x: float
+    y: float
+    z: float
+    w: float
+
+DOMPointInit: TypeAlias = Union[DOMPointInit1, DOMPointInit2]
 
 class DOMPoint(DOMPointReadOnly):
     """[MDN Reference](https://developer.mozilla.org/docs/Web/API/DOMPoint)"""
@@ -71,11 +79,19 @@ class DOMPointReadOnly:
     def toJSON(self) -> Dict[str, float]:
         """[MDN Reference](https://developer.mozilla.org/docs/Web/API/DOMPointReadOnly/toJSON)"""
 
-class DOMRectInit(Protocol):
+class DOMRectInit1(Protocol):
     x: float
     y: float
     width: float
     height: float
+
+class DOMRectInit2(TypedDict):
+    x: float
+    y: float
+    width: float
+    height: float
+
+DOMRectInit: TypeAlias = DOMRectInit1 | DOMRectInit2
 
 class DOMRect(DOMRectReadOnly):
     """MDN Reference: https://developer.mozilla.org/docs/Web/API/DOMRect"""

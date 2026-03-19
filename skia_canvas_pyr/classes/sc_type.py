@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias, TypedDict, Tuple, Union, List
+from typing import Literal, TypeAlias, TypedDict, Tuple, Union, List, Protocol
 
 CanvasDirection: TypeAlias = Literal["ltr", "rtl", "inherit"]
 CanvasFillRule: TypeAlias = Literal["nonzero", "evenodd"]
@@ -203,3 +203,9 @@ class ExportOptions(RenderOptions, total=False):
 class SaveOptions(ExportOptions, total=False):
     # Image format to use (either as a file extension or a mime-type string)
     format: ExportFormat
+
+
+class Spacing(Protocol):
+    size: float
+    unit: str
+    px: float

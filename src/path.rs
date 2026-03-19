@@ -126,22 +126,25 @@ impl Path2D {
   }
 
   /// Adds a path to the current path.
-  pub fn add_path(&mut self, other: &Path2D, transform: Option<Vec<f32>>) {
+  pub fn add_path(&mut self, other: Option<&Path2D>, transform: Option<Vec<f32>>) {
     let matrix = match transform {
       Some(t) => to_matrix(&t).unwrap_or_else(Matrix::new_identity),
       None => Matrix::new_identity(),
     };
 
     // make a copy if adding a path to itself, otherwise use a ref
-    if std::ptr::eq(self, other) {
-      let src = other.path.clone();
-      self
-        .path
-        .add_path_matrix(&src, &matrix, AddPathMode::Append);
-    } else {
-      let src = &other.path;
-      self.path.add_path_matrix(src, &matrix, AddPathMode::Append);
-    }
+    match other {
+      Some(other) => {
+        let src = &other.path;
+        self.path.add_path_matrix(src, &matrix, AddPathMode::Append);
+      }
+      None => {
+        let src = self.path.clone();
+        self
+          .path
+          .add_path_matrix(&src, &matrix, AddPathMode::Append);
+      }
+    };
   }
 
   /// Causes the point of the pen to move back to the start of the current sub-path. It tries to draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
@@ -461,7 +464,7 @@ impl Path2D {
 
         if verb == Verb::Conic {
           let weight = weights.conic_weight().unwrap();
-          segment.set_item(5, weight)?;
+          segment.append(weight)?;
         }
 
         edges.push(segment.to_tuple());

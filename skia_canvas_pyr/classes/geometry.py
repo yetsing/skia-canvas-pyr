@@ -5,7 +5,94 @@ Polyfill for DOMMatrix and friends
 import math
 import re
 from numbers import Number
-from typing import Any, Mapping, Sequence, TypeGuard, Union
+from typing import (
+    Any,
+    Mapping,
+    Sequence,
+    TypeGuard,
+    Union,
+    Protocol,
+    TypedDict,
+    TypeAlias,
+)
+
+# region Type definitions
+
+
+class DOMPointInit1(Protocol):
+    x: float
+    y: float
+    z: float
+    w: float
+
+
+class DOMPointInit2(TypedDict):
+    x: float
+    y: float
+    z: float
+    w: float
+
+
+DOMPointInit: TypeAlias = Union[DOMPointInit1, DOMPointInit2]
+
+
+class DOMRectInit1(Protocol):
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+class DOMRectInit2(TypedDict):
+    x: float
+    y: float
+    width: float
+    height: float
+
+
+DOMRectInit: TypeAlias = DOMRectInit1 | DOMRectInit2
+
+
+class DOMMatrix2DInit(Protocol):
+    a: float
+    b: float
+    c: float
+    d: float
+    e: float
+    f: float
+    m11: float
+    m12: float
+    m21: float
+    m22: float
+    m41: float
+    m42: float
+
+
+class DOMMatrixInit(DOMMatrix2DInit):
+    is2D: bool
+    m13: float
+    m14: float
+    m23: float
+    m24: float
+    m31: float
+    m32: float
+    m33: float
+    m34: float
+    m43: float
+    m44: float
+
+
+class Abcdef(Protocol):
+    a: float
+    b: float
+    c: float
+    d: float
+    e: float
+    f: float
+
+
+# endregion
+
 
 # vendored in order to fix its dependence on the window global [@samizdatco 2020/08/04]
 # removed SVGMatrix references that were guaranteed to be undefined on node [@mpaperno 2024/10/20]
@@ -196,7 +283,7 @@ def _get_prop_default(obj, key, default=None):
 
 
 def _is_numeric(value: Any) -> TypeGuard[float | int]:
-    return isinstance(value, Number) and not isinstance(value, bool)
+    return isinstance(value, Number) and not isinstance(value, bool) and not math.isnan(value)  # type: ignore
 
 
 def _parse_angle(value):
@@ -1195,6 +1282,8 @@ class DOMMatrix:
 #
 # Helpers to reconcile Skia and DOMMatrix's disagreement about row/col orientation
 #
+
+Matrix: TypeAlias = str | DOMMatrix | Abcdef | Sequence[float]
 
 
 def toSkMatrix(*args):

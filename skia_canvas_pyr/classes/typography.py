@@ -1,11 +1,15 @@
 import dataclasses
-from typing import TYPE_CHECKING
+from typing import Dict, List, overload
 
-from ..skia_canvas_pyr import get_families, has, family, add_family, reset
-
-if TYPE_CHECKING:
-    from typing import Dict, List, overload
-    from ..skia_canvas_pyr import FamilyDetails, TypefaceDetails
+from ..skia_canvas_pyr import (
+    get_families,
+    has,
+    family,
+    add_family,
+    reset,
+    FamilyDetails,
+    TypefaceDetails,
+)
 
 
 class _FontLibrary:

@@ -6,11 +6,9 @@ import dataclasses
 import math
 import re
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, cast
+from typing import cast, Any, List, Dict, Tuple
 
-if TYPE_CHECKING:
-    from typing import Any, List, Dict, Tuple
-    from ..skia_canvas_pyr import Spacing
+from .sc_type import Spacing
 
 # -- Font & Variant --------------------------------------------------------------------
 #    https://developer.mozilla.org/en-US/docs/Web/CSS/font-variant

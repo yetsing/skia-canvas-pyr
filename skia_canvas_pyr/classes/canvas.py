@@ -7,7 +7,7 @@ import os
 import re
 import warnings
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, List, overload, TypedDict
 
 from ..skia_canvas_pyr import (
     CanvasTexture as CanvasTextureRs,
@@ -16,25 +16,23 @@ from ..skia_canvas_pyr import (
     Canvas as CanvasRs,
 )
 from .imagery import Image, ImageData, _pixel_size
-from .geometry import toSkMatrix
+from .geometry import toSkMatrix, Matrix
+from .path import Path2D
+from .sc_type import (
+    CanvasLineCap,
+    Offset,
+    CanvasInitOptions,
+    ExportOptions,
+    SaveOptions,
+    EngineDetails,
+)
 
 if TYPE_CHECKING:
-    from typing import Literal, List, overload, TypedDict
-    from .sc_type import (
-        CanvasLineCap,
-        Offset,
-        CanvasInitOptions,
-        ExportOptions,
-        SaveOptions,
-        EngineDetails,
-    )
     from .context import CanvasRenderingContext2D
-    from .geometry import Matrix
-    from .path import Path2D
 
 
 class Canvas:
-    __slots__ = ("__contexts", "__canvas")
+    __slots__ = ("__contexts", "__canvas", "__weakref__")
 
     def __init__(
         self, width: float, height: float, opt: CanvasInitOptions | None = None

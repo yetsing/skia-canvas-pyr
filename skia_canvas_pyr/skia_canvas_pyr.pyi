@@ -12,6 +12,7 @@ from typing import (
     Protocol,
     Dict,
 )
+from .classes.sc_type import Spacing
 
 PathOpName = Literal[
     "difference",
@@ -41,7 +42,7 @@ class Path2D:
     @staticmethod
     def from_svg(d: str) -> Path2D: ...
     def add_path(
-        self, other: Path2D, transform: Sequence[float] | None = None
+        self, other: Path2D | None, transform: Sequence[float] | None = None
     ) -> None: ...
     def close_path(self) -> None: ...
     def move_to(self, x: float, y: float) -> None: ...
@@ -259,11 +260,6 @@ class Font(Protocol):
 class FontVariant(Protocol):
     variant: str
     features: Dict[str, float | List[str]]
-
-class Spacing(Protocol):
-    size: float
-    unit: str
-    px: float
 
 class DecorationStyle(Protocol):
     text: str

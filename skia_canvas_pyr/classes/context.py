@@ -4,7 +4,7 @@ import json
 import math
 import warnings
 
-from typing import TYPE_CHECKING
+from typing import overload, Sequence, Literal, List, Tuple
 
 from . import css
 from .canvas import Canvas, CanvasGradient, CanvasPattern, CanvasTexture
@@ -13,27 +13,24 @@ from .geometry import fromSkMatrix, toSkMatrix, DOMMatrix
 from .path import Path2D
 from .typography import TextMetrics
 from ..skia_canvas_pyr import Context2D as Context2DRs
-
-if TYPE_CHECKING:
-    from typing import overload, Sequence, Literal, List, Tuple
-    from .sc_type import (
-        QuadOrRect,
-        CanvasFillRule,
-        Offset,
-        CanvasLineCap,
-        CanvasLineDashFit,
-        CanvasLineJoin,
-        CanvasDirection,
-        CanvasFontStretch,
-        CanvasTextAlign,
-        CanvasTextBaseline,
-        FontVariantSetting,
-        GlobalCompositeOperation,
-        ImageSmoothingQuality,
-        ImageDataSettings,
-        ImageDataExportSettings,
-    )
-    from .geometry import Matrix, DOMPointInit
+from .sc_type import (
+    QuadOrRect,
+    CanvasFillRule,
+    Offset,
+    CanvasLineCap,
+    CanvasLineDashFit,
+    CanvasLineJoin,
+    CanvasDirection,
+    CanvasFontStretch,
+    CanvasTextAlign,
+    CanvasTextBaseline,
+    FontVariantSetting,
+    GlobalCompositeOperation,
+    ImageSmoothingQuality,
+    ImageDataSettings,
+    ImageDataExportSettings,
+)
+from .geometry import Matrix, DOMPointInit
 
 
 @dataclasses.dataclass

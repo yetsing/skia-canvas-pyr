@@ -10,3 +10,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = ["version"]
+dependencies = [
+    "pytest>=9.0.2",
+]
+
+[tool.maturin]
+profile = "dev"
+editable-profile = "dev"
+features = ["vulkan", "window", "freetype"]
+include = ["fonts"]

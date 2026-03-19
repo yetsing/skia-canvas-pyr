@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, overload, Literal, List, Sequence, Tuple
 
 from . import css
-from .geometry import toSkMatrix
+from .geometry import toSkMatrix, DOMMatrix2DInit, DOMPointInit, Matrix
 from ..skia_canvas_pyr import Path2D as Path2DRs
 
 if TYPE_CHECKING:
-    from typing import overload, Literal, List, Sequence, Tuple
-    from .geometry import DOMMatrix2DInit, DOMPointInit, Matrix
     from ..skia_canvas_pyr import Path2DBounds, Path2DEdge
 
 
@@ -52,10 +50,17 @@ class Path2D:
         return list(filter(lambda x: x, it))  # type: ignore
 
     def addPath(self, path: Path2D, matrix: DOMMatrix2DInit | None = None):
+        if not isinstance(path, Path2D):
+            raise TypeError("path must be a Path2D instance")
         sk_matrix = None
         if matrix is not None:
             sk_matrix = toSkMatrix(matrix)
-        self.__path.add_path(path.__path, sk_matrix)
+        if self is path:
+            # 如果是同一个对象，传入 None ，避免 rust 端借用冲突
+            path_rs = None
+        else:
+            path_rs = path.__path
+        self.__path.add_path(path_rs, sk_matrix)
 
     def moveTo(self, x: float, y: float):
         self.__path.move_to(x, y)
@@ -130,26 +135,38 @@ class Path2D:
             self.__path.round_rect(x, y, width, height, *radii_args)
 
     def interpolate(self, other: Path2D, weight: float) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.interpolate(other.__path, weight)
         return Path2D(path)
 
     def complement(self, other: Path2D) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.op(other.__path, "complement")
         return Path2D(path)
 
     def difference(self, other: Path2D) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.op(other.__path, "difference")
         return Path2D(path)
 
     def intersect(self, other: Path2D) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.op(other.__path, "intersect")
         return Path2D(path)
 
     def union(self, other: Path2D) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.op(other.__path, "union")
         return Path2D(path)
 
     def xor(self, other: Path2D) -> Path2D:
+        if not isinstance(other, Path2D):
+            raise TypeError("other must be a Path2D instance")
         path = self.__path.op(other.__path, "xor")
         return Path2D(path)
 

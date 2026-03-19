@@ -23,6 +23,8 @@ mod skia_canvas_pyr {
 
   #[pymodule_export]
   use super::{
+    canvas::Canvas,
+    context::Context2D,
     font_library::{FamilyDetails, add_family, family, get_families, has, reset},
     gradient::CanvasGradient,
     gui::{activate, close, open, quit, register, set_mode, set_rate, wait_for_termination},

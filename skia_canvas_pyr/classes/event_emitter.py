@@ -22,8 +22,7 @@ from __future__ import annotations
 import threading
 import warnings
 from collections import defaultdict
-from functools import wraps
-from typing import Any, Callable, DefaultDict, Dict, List, Optional, Sequence
+from typing import Any, Callable, DefaultDict, List, Optional
 
 Listener = Callable[..., Any]
 
