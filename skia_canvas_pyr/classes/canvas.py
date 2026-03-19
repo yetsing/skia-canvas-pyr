@@ -71,9 +71,9 @@ class Canvas:
 
     @width.setter
     def width(self, value: float) -> None:
-        self.__canvas.set_width(value)
+        self.__canvas.set_width(value if value >= 0 else 300)
         if self.__contexts:
-            self.__contexts[0].reset_size()
+            self.__contexts[0].raw_reset_size()
 
     @property
     def height(self) -> float:
@@ -81,9 +81,9 @@ class Canvas:
 
     @height.setter
     def height(self, value: float) -> None:
-        self.__canvas.set_height(value)
+        self.__canvas.set_height(value if value >= 0 else 150)
         if self.__contexts:
-            self.__contexts[0].reset_size()
+            self.__contexts[0].raw_reset_size()
 
     def newPage(self, *args: float) -> CanvasRenderingContext2D:
         from .context import CanvasRenderingContext2D
@@ -139,6 +139,12 @@ class Canvas:
 
     def core(self) -> CanvasRs:
         return self.__canvas
+
+    def raw_set_width(self, value: float) -> None:
+        self.__canvas.set_width(value)
+
+    def raw_set_height(self, value: float) -> None:
+        self.__canvas.set_height(value)
 
 
 class CanvasTexture:

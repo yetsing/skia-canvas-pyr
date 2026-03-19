@@ -8,7 +8,7 @@ if TYPE_CHECKING:
     from ..skia_canvas_pyr import FamilyDetails, TypefaceDetails
 
 
-class FontLibrary:
+class _FontLibrary:
     def __init__(self) -> None:
         pass
 
@@ -88,3 +88,6 @@ class TextMetrics:
     width: float
 
     lines: list[dict] | None = None
+
+
+FontLibrary = _FontLibrary()

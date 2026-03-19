@@ -9,7 +9,7 @@ from ..urls import fetch_url, decode_data_url, expand_url
 from .sc_type import ImageDataSettings
 
 
-def loadImage(src) -> "Image":
+def loadImage(src: str | bytes) -> "Image":
     data, img_src = _fetch_data(src)
     return Image(data, img_src)
 
@@ -71,6 +71,19 @@ class Image:
 
     def core(self) -> ImageRs:
         return self.__image
+
+
+@overload
+def loadImageData(src: str | bytes, width: int, /) -> "ImageData": ...
+@overload
+def loadImageData(src: str | bytes, width: int, height: int, /) -> "ImageData": ...
+@overload
+def loadImageData(
+    src: str | bytes, width: int, height: int, option: ImageDataSettings | None, /
+) -> "ImageData": ...
+def loadImageData(src: str | bytes, *args) -> "ImageData":
+    data, _ = _fetch_data(src)
+    return ImageData(data, *args)
 
 
 class ImageData:

@@ -15,7 +15,7 @@ from .typography import TextMetrics
 from ..skia_canvas_pyr import Context2D as Context2DRs
 
 if TYPE_CHECKING:
-    from typing import overload, Sequence, Literal, List
+    from typing import overload, Sequence, Literal, List, Tuple
     from .sc_type import (
         QuadOrRect,
         CanvasFillRule,
@@ -786,10 +786,16 @@ class CanvasRenderingContext2D:
         if parsed is not None:
             self.__context.set_filter(parsed)
 
-    def reset_size(self) -> None:
+    def core(self) -> Context2DRs:
+        return self.__context
+
+    def raw_reset_size(self) -> None:
         canvas = self.canvas
         if canvas is not None:
             self.__context.reset_size(canvas.core())
 
-    def core(self) -> Context2DRs:
-        return self.__context
+    def raw_size(self) -> Tuple[float, float]:
+        return self.__context.get_size()
+
+    def raw_set_size(self, width: float, height: float):
+        self.__context.set_size(width, height)

@@ -7,6 +7,8 @@ mod font_library;
 #[allow(clippy::all)]
 mod gpu;
 mod gradient;
+#[cfg(feature = "window")]
+mod gui;
 mod image;
 mod path;
 mod pattern;
@@ -23,6 +25,7 @@ mod skia_canvas_pyr {
   use super::{
     font_library::{FamilyDetails, add_family, family, get_families, has, reset},
     gradient::CanvasGradient,
+    gui::{activate, close, open, quit, register, set_mode, set_rate, wait_for_termination},
     image::Image,
     path::{Path2D, Path2DBounds},
     pattern::CanvasPattern,
