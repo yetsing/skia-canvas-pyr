@@ -77,3 +77,4 @@ docs/_build/
 *.tsx
 
 index.pyi
+tests/assets

@@ -12,6 +12,7 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
     "pytest>=9.0.2",
+    "tomli>=2.4.0",
 ]
 
 [tool.maturin]
@@ -19,3 +20,13 @@ profile = "dev"
 editable-profile = "dev"
 features = ["vulkan", "window", "freetype"]
 include = ["fonts"]
+
+[tool.uv]
+package = false
+
+[tool.skia_canvas_pyr.upstream]
+name = "skia-canvas"
+version = "3.0.8"
+commit = "042312a3f40b660b1d7dc0beba541486171bc5cc"
+url = "https://github.com/samizdatco/skia-canvas"
+license = "MIT"

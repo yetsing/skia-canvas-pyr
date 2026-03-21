@@ -79,13 +79,17 @@ wheels = [
 
 [[package]]
 name = "skia-canvas-pyr"
-source = { editable = "." }
+source = { virtual = "." }
 dependencies = [
     { name = "pytest" },
+    { name = "tomli" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pytest", specifier = ">=9.0.2" }]
+requires-dist = [
+    { name = "pytest", specifier = ">=9.0.2" },
+    { name = "tomli", specifier = ">=2.4.0" },
+]
 
 [[package]]
 name = "tomli"

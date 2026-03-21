@@ -1,5 +1,6 @@
 import dataclasses
-from typing import Dict, List, overload
+from pathlib import Path
+from typing import Dict, List, overload, Sequence
 
 from ..skia_canvas_pyr import (
     get_families,
@@ -10,6 +11,18 @@ from ..skia_canvas_pyr import (
     FamilyDetails,
     TypefaceDetails,
 )
+
+
+def _convert_path_list(font_paths: List[str | Path]) -> List[str]:
+    res = []
+    for p in font_paths:
+        if isinstance(p, Path):
+            res.append(str(p))
+        elif isinstance(p, str):
+            res.append(p)
+        else:
+            raise TypeError(f"Invalid font path type: {type(p).__name__}")
+    return res
 
 
 class _FontLibrary:
@@ -27,27 +40,33 @@ class _FontLibrary:
         return family(family_name)
 
     @overload
-    def use(self, font_paths: List[str], /) -> List[TypefaceDetails]: ...
+    def use(self, font_path: str | Path, /) -> List[TypefaceDetails]: ...
     @overload
-    def use(self, alias: str, font_paths: List[str], /) -> List[TypefaceDetails]: ...
+    def use(self, font_paths: Sequence[str | Path], /) -> List[TypefaceDetails]: ...
     @overload
     def use(
-        self, fonts: Dict[str, List[str]], /
+        self, alias: str, font_paths: Sequence[str | Path], /
+    ) -> List[TypefaceDetails]: ...
+    @overload
+    def use(
+        self, fonts: Dict[str, Sequence[str | Path]], /
     ) -> Dict[str, List[TypefaceDetails]]: ...
 
     def use(self, *args) -> List[TypefaceDetails] | Dict[str, List[TypefaceDetails]]:
         if len(args) == 1:
             first = args[0]
             if isinstance(first, list):
-                return add_family(first, None)
+                return add_family(_convert_path_list(first), None)
             elif isinstance(first, dict):
                 results = {}
                 for alias, font_paths in first.items():
-                    results[alias] = add_family(font_paths, alias)
+                    results[alias] = add_family(_convert_path_list(font_paths), alias)
                 return results
+            elif isinstance(first, (str, Path)):
+                return add_family([str(first)], None)
         elif len(args) == 2:
             alias, font_paths = args
-            return add_family(font_paths, alias)
+            return add_family(_convert_path_list(font_paths), alias)
 
         raise ValueError("Invalid arguments for use() method")
 

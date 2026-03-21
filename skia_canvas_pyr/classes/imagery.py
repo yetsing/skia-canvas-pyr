@@ -1,7 +1,8 @@
 import pathlib
 import re
-
-from typing import Tuple, overload, TypedDict
+from urllib.parse import ParseResult
+from pathlib import Path
+from typing import Tuple, overload
 
 
 from ..skia_canvas_pyr import Image as ImageRs
@@ -9,7 +10,7 @@ from ..urls import fetch_url, decode_data_url, expand_url
 from .sc_type import ImageDataSettings
 
 
-def loadImage(src: str | bytes) -> "Image":
+def loadImage(src: str | bytes | Path | ParseResult) -> "Image":
     data, img_src = _fetch_data(src)
     return Image(data, img_src)
 
@@ -52,7 +53,7 @@ class Image:
         return self.__image.get_src()
 
     @src.setter
-    def set_src(self, src: str) -> None:
+    def src(self, src: str | bytes | Path | ParseResult) -> None:
         src = expand_url(src)
         if isinstance(src, str):
             self.__image.set_src(src)
