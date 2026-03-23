@@ -225,7 +225,7 @@ def parseFont(text) -> Font | None:
                         canonical_parts = [
                             style,
                             variant if variant != style else None,
-                            weight if weight not in (variant, style) else None,
+                            str(weight) if weight not in (variant, style) else None,
                             (
                                 stretch
                                 if stretch not in (variant, style, weight)
@@ -258,7 +258,6 @@ def parseFont(text) -> Font | None:
 
             raise ValueError("Could not find a font size value")
         except Exception:
-            # console.warn(Object.assign(e, {name:"Warning"}))
             cache["font"][text] = None
 
     return cache["font"].get(text)

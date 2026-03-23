@@ -107,6 +107,7 @@ impl CanvasTexture {
     path: Option<&Path2D>,
     color: Option<&str>,
   ) -> PyResult<Self> {
+    finite_floats(&[line, angle, h, v, x, y])?;
     let path = path.map(|p| p.path.clone());
     let color = color.and_then(css_to_color).unwrap_or(Color::BLACK);
     let cap = match to_stroke_cap(cap) {

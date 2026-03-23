@@ -35,7 +35,10 @@ class Canvas:
     __slots__ = ("__contexts", "__canvas", "__weakref__")
 
     def __init__(
-        self, width: float, height: float, opt: CanvasInitOptions | None = None
+        self,
+        width: float | None = None,
+        height: float | None = None,
+        opt: CanvasInitOptions | None = None,
     ):
         opt = opt or {}
         self.__canvas = CanvasRs(
@@ -68,8 +71,10 @@ class Canvas:
         return self.__canvas.get_width()
 
     @width.setter
-    def width(self, value: float) -> None:
-        self.__canvas.set_width(value if value >= 0 else 300)
+    def width(self, value: float | None) -> None:
+        self.__canvas.set_width(
+            value if value and math.isfinite(value) and value >= 0 else 300
+        )
         if self.__contexts:
             self.__contexts[0].raw_reset_size()
 
@@ -78,8 +83,10 @@ class Canvas:
         return self.__canvas.get_height()
 
     @height.setter
-    def height(self, value: float) -> None:
-        self.__canvas.set_height(value if value >= 0 else 150)
+    def height(self, value: float | None) -> None:
+        self.__canvas.set_height(
+            value if value and math.isfinite(value) and value >= 0 else 150
+        )
         if self.__contexts:
             self.__contexts[0].raw_reset_size()
 
@@ -163,17 +170,21 @@ class CanvasTexture:
             x, y = (offset + offset)[:2]
         elif isinstance(offset, tuple):
             x, y = (offset + offset)[:2]
-        else:
+        elif isinstance(offset, (int, float)):
             x = y = offset
+        else:
+            raise TypeError("Expected a number or array for `offset`")
         if isinstance(spacing, list):
             h, v = (spacing + spacing)[:2]
         elif isinstance(spacing, tuple):
             h, v = (spacing + spacing)[:2]
-        else:
+        elif isinstance(spacing, (int, float)):
             h = v = spacing
+        else:
+            raise TypeError("Expected a number or array for `spacing`")
 
         if path is not None and not isinstance(path, Path2D):
-            raise TypeError("path must be a Path2D instance or None")
+            raise TypeError("Expected a Path2D for `path`")
 
         path_rs = path.core() if path is not None else None
         if line is None:

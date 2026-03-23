@@ -4,7 +4,7 @@ import json
 import math
 import warnings
 
-from typing import overload, Sequence, Literal, List, Tuple
+from typing import overload, Sequence, Literal, List, Tuple, TypedDict
 
 from . import css
 from .canvas import Canvas, CanvasGradient, CanvasPattern, CanvasTexture
@@ -40,6 +40,20 @@ class ImageDataExportOptions:
     matte: str | None
     density: float | None
     msaa: float | None
+
+
+class CreateTextureOptions(TypedDict, total=False):
+    path: Path2D
+    line: float
+    cap: CanvasLineCap
+    color: str
+    angle: float
+    offset: Offset
+    outline: bool
+
+
+def _is_finite_number(value) -> bool:
+    return isinstance(value, (int, float)) and math.isfinite(value)
 
 
 class CanvasRenderingContext2D:
@@ -114,7 +128,9 @@ class CanvasRenderingContext2D:
     def rotate(self, angle: float) -> None:
         self.__context.rotate(angle)
 
-    def createProjection(self, quad: QuadOrRect, basis: QuadOrRect) -> DOMMatrix:
+    def createProjection(
+        self, quad: QuadOrRect, basis: QuadOrRect | Tuple = ()
+    ) -> DOMMatrix:
         return fromSkMatrix(self.__context.create_projection(quad, basis))
 
     # -- bézier paths ----------------------------------------------------------
@@ -196,18 +212,82 @@ class CanvasRenderingContext2D:
             self.__context.round_rect(x, y, width, height, *radii_args)
 
     # -- using paths -----------------------------------------------------------
+    @overload
+    def fill(self) -> None: ...
+    @overload
+    def fill(self, path: Path2D, /) -> None: ...
+    @overload
+    def fill(self, rule: CanvasFillRule, /) -> None: ...
+    @overload
+    def fill(self, path: Path2D, rule: CanvasFillRule, /) -> None: ...
     def fill(
-        self, path: Path2D | None = None, rule: CanvasFillRule | None = None
+        self,
+        *args,
     ) -> None:
-        self.__context.fill(path and path.core(), rule)
+        path_rs = None
+        rule = None
+        match len(args):
+            case 0:
+                pass
+            case 1:
+                if not isinstance(args[0], (Path2D, str)):
+                    raise TypeError("Expected a Path2D or a CanvasFillRule argument")
+                if isinstance(args[0], Path2D):
+                    path_rs = args[0].core()
+                else:
+                    rule = args[0]
+            case 2:
+                if not isinstance(args[0], Path2D):
+                    raise TypeError("Expected a Path2D as the first argument")
+                if not isinstance(args[1], str):
+                    raise TypeError("Expected a CanvasFillRule as the second argument")
+
+                path_rs = args[0].core()
+                rule = args[1]
+            case _:
+                raise TypeError("too many arguments for fill()")
+        self.__context.fill(path_rs, rule)
 
     def stroke(self, path: Path2D | None = None) -> None:
+        if path is not None and not isinstance(path, Path2D):
+            raise TypeError("Expected a Path2D")
         self.__context.stroke(path and path.core())
 
+    @overload
+    def clip(self) -> None: ...
+    @overload
+    def clip(self, path: Path2D, /) -> None: ...
+    @overload
+    def clip(self, rule: CanvasFillRule, /) -> None: ...
+    @overload
+    def clip(self, path: Path2D, rule: CanvasFillRule, /) -> None: ...
     def clip(
-        self, path: Path2D | None = None, rule: CanvasFillRule | None = None
+        self,
+        *args,
     ) -> None:
-        self.__context.clip(path and path.core(), rule)
+        path_rs = None
+        rule = None
+        match len(args):
+            case 0:
+                pass
+            case 1:
+                if not isinstance(args[0], (Path2D, str)):
+                    raise TypeError("Expected a Path2D or a CanvasFillRule argument")
+                if isinstance(args[0], Path2D):
+                    path_rs = args[0].core()
+                else:
+                    rule = args[0]
+            case 2:
+                if not isinstance(args[0], Path2D):
+                    raise TypeError("Expected a Path2D as the first argument")
+                if not isinstance(args[1], str):
+                    raise TypeError("Expected a CanvasFillRule as the second argument")
+
+                path_rs = args[0].core()
+                rule = args[1]
+            case _:
+                raise TypeError("too many arguments for clip()")
+        self.__context.clip(path_rs, rule)
 
     @overload
     def isPointInPath(self, x: float, y: float, /) -> bool: ...
@@ -282,15 +362,10 @@ class CanvasRenderingContext2D:
     def createTexture(
         self,
         spacing: Offset,
-        path: Path2D | None = None,
-        line: float | None = None,
-        cap: CanvasLineCap = "butt",
-        color: str | None = None,
-        angle: float | None = None,
-        offset: Offset = 0,
-        outline: bool = False,
+        options: CreateTextureOptions | None = None,
     ) -> CanvasTexture:
-        return CanvasTexture(spacing, path, line, cap, color, angle, offset, outline)
+        options = options or {}
+        return CanvasTexture(spacing, **options)
 
     # -- fill & stroke ---------------------------------------------------------
     def fillRect(self, x: float, y: float, width: float, height: float) -> None:
@@ -317,7 +392,7 @@ class CanvasRenderingContext2D:
         if isinstance(value, (CanvasGradient, CanvasPattern, CanvasTexture)):
             self.__context.set_fill_style(value.core())
             self.__fill = value
-        else:
+        elif isinstance(value, str):
             self.__context.set_fill_style(value)
             self.__fill = None
 
@@ -338,7 +413,7 @@ class CanvasRenderingContext2D:
         if isinstance(value, (CanvasGradient, CanvasPattern, CanvasTexture)):
             self.__context.set_stroke_style(value.core())
             self.__stroke = value
-        else:
+        elif isinstance(value, str):
             self.__context.set_stroke_style(value)
             self.__stroke = None
 
@@ -426,7 +501,9 @@ class CanvasRenderingContext2D:
     def createImageData(
         self, width: float, height: float, settings: ImageDataSettings | None = None
     ) -> ImageData:
-        return ImageData(int(width), int(height), settings)
+        if not _is_finite_number(width) or not _is_finite_number(height):
+            raise TypeError("Expected a finite number for width and height")
+        return ImageData(width, height, settings)
 
     def getImageData(
         self,
@@ -471,6 +548,13 @@ class CanvasRenderingContext2D:
         if canvas is None:
             raise RuntimeError("Canvas context has been detached from canvas")
 
+        if (
+            not math.isfinite(x)
+            or not math.isfinite(y)
+            or not math.isfinite(width)
+            or not math.isfinite(height)
+        ):
+            raise TypeError("Expected a finite number for x, y, width and height")
         buffer = self.__context.get_image_data(
             x, y, width, height, ImageDataExportOptions(**opts), canvas.core()
         )
@@ -504,6 +588,11 @@ class CanvasRenderingContext2D:
     ) -> None:
         if not isinstance(image_data, ImageData):
             raise TypeError("Expected an ImageData as 1st arg")
+        if not math.isfinite(x) or not math.isfinite(y):
+            raise TypeError("Expected a finite number for x and y")
+        for arg in args:
+            if not math.isfinite(arg):
+                raise TypeError("Expected a finite number for dirty rectangle")
         self.__context.put_image_data(image_data, x, y, args)
 
     @overload
@@ -584,10 +673,14 @@ class CanvasRenderingContext2D:
 
     def drawCanvas(self, image: Canvas, *coords: float) -> None:
         if isinstance(image, Canvas):
-            source = image.getContext("2d")
-            if source is None:
-                raise TypeError("Expected an Image or a Canvas argument")
-            self.__context.draw_canvas(source.core(), coords)
+            # 如果是同一个对象，传入 None ，避免 rust 端借用冲突
+            ctx_rs = None
+            if self.canvas is not image:
+                source = image.getContext("2d")
+                if source is None:
+                    raise TypeError("Expected an Image or a Canvas argument")
+                ctx_rs = source.core()
+            self.__context.draw_canvas(ctx_rs, coords)
         else:
             self.drawImage(image, *coords)
 
@@ -664,7 +757,7 @@ class CanvasRenderingContext2D:
     def fillText(
         self, text: str, x: float, y: float, max_width: float | None = None
     ) -> None:
-        self.__context.fill_text(text, x, y, max_width)
+        self.__context.fill_text(str(text), x, y, max_width)
 
     def strokeText(
         self, text: str, x: float, y: float, max_width: float | None = None

@@ -403,13 +403,13 @@ def _parse_transform_string(transform_string):
 
 
 def _set_number_2d(receiver, index, value):
-    if not _is_numeric(value):
+    if not isinstance(value, (int, float)):
         raise TypeError("Expected number")
     receiver._values[index] = float(value)
 
 
 def _set_number_3d(receiver, index, value):
-    if not _is_numeric(value):
+    if not isinstance(value, (int, float)):
         raise TypeError("Expected number")
 
     fval = float(value)

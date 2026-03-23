@@ -68,16 +68,67 @@ pub fn string_for_key(obj: Borrowed<'_, '_, PyAny>, attr: &str) -> PyResult<Stri
 
 /* #region floats */
 
+pub fn opt_finite_float(v: Option<f32>, default: f32) -> PyResult<f32> {
+  match v {
+    Some(num) => finite_float(num),
+    None => Ok(default),
+  }
+}
+
+pub fn opt_finite_float64(v: Option<f64>, default: f64) -> PyResult<f64> {
+  match v {
+    Some(num) => finite_float64(num),
+    None => Ok(default),
+  }
+}
+
+pub fn finite_float(v: f32) -> PyResult<f32> {
+  if v.is_finite() {
+    Ok(v)
+  } else {
+    Err(pyo3::exceptions::PyValueError::new_err(
+      "Expected a finite number",
+    ))
+  }
+}
+
+pub fn finite_floats(v: &[f32]) -> PyResult<()> {
+  for &num in v {
+    finite_float(num)?;
+  }
+  Ok(())
+}
+
+pub fn finite_float64(v: f64) -> PyResult<f64> {
+  if v.is_finite() {
+    Ok(v)
+  } else {
+    Err(pyo3::exceptions::PyValueError::new_err(
+      "Expected a finite number",
+    ))
+  }
+}
+
+pub fn finite_float64s(v: &[f64]) -> PyResult<()> {
+  for &num in v {
+    finite_float64(num)?;
+  }
+  Ok(())
+}
+
 pub fn opt_float_for_key(obj: Borrowed<'_, '_, PyAny>, attr: &str) -> Option<f32> {
-  obj.getattr(attr).ok().and_then(|v| v.extract::<f32>().ok())
+  obj
+    .getattr(attr)
+    .ok()
+    .and_then(|v| v.extract::<f32>().and_then(finite_float).ok())
 }
 
 pub fn float_for_key(obj: Borrowed<'_, '_, PyAny>, attr: &str) -> PyResult<f32> {
-  obj.getattr(attr)?.extract::<f32>()
+  obj.getattr(attr)?.extract::<f32>().and_then(finite_float)
 }
 
 pub fn float_for_key_mapping(obj: &Bound<'_, PyMapping>, attr: &str) -> PyResult<f32> {
-  obj.get_item(attr)?.extract::<f32>()
+  obj.get_item(attr)?.extract::<f32>().and_then(finite_float)
 }
 
 /* #endregion */

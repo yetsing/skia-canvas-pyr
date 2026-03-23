@@ -53,7 +53,7 @@ impl Canvas {
     text_gamma: Option<f64>,
     gpu_enabled: bool,
   ) -> PyResult<Self> {
-    let text_contrast = text_contrast.unwrap_or(0.0);
+    let text_contrast = opt_finite_float64(text_contrast, 0.0)?;
     let (min_c, max_c) = (
       SurfaceProps::MIN_CONTRAST_INCLUSIVE as _,
       SurfaceProps::MAX_CONTRAST_INCLUSIVE as _,
@@ -65,7 +65,7 @@ impl Canvas {
       )));
     }
 
-    let mut text_gamma = text_gamma.unwrap_or(1.4);
+    let mut text_gamma = opt_finite_float64(text_gamma, 1.4)?;
     let (min_g, max_g) = (
       SurfaceProps::MIN_GAMMA_INCLUSIVE as _,
       SurfaceProps::MAX_GAMMA_EXCLUSIVE as _,
@@ -73,7 +73,7 @@ impl Canvas {
     if text_gamma == max_g {
       text_gamma -= f32::EPSILON as f64
     }; // nudge down values right at the max
-    if text_gamma < min_g || text_contrast > max_g {
+    if text_gamma < min_g || text_gamma > max_g {
       return Err(pyo3::exceptions::PyValueError::new_err(format!(
         "Expected a number between {} and {} for `textGamma`",
         min_g, max_g
@@ -92,6 +92,7 @@ impl Canvas {
   }
 
   pub fn set_width(&mut self, width: f32) -> PyResult<()> {
+    finite_float(width)?;
     if width < 0.0 {
       return Err(pyo3::exceptions::PyValueError::new_err(
         "Width must be a non-negative number",
@@ -102,6 +103,7 @@ impl Canvas {
   }
 
   pub fn set_height(&mut self, height: f32) -> PyResult<()> {
+    finite_float(height)?;
     if height < 0.0 {
       return Err(pyo3::exceptions::PyValueError::new_err(
         "Height must be a non-negative number",
@@ -161,7 +163,7 @@ impl Canvas {
     options: ExportOptions,
   ) -> PyResult<()> {
     let sequence = padding.is_some();
-    let padding = padding.unwrap_or(-1.0);
+    let padding = opt_finite_float(padding, -1.0)?;
     let pages = pages_arg(pages, &options, self)?;
 
     let result = {

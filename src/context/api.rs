@@ -39,8 +39,10 @@ impl Context2D {
     (bounds.size().width, bounds.size().height)
   }
 
-  pub fn set_size(&mut self, width: f32, height: f32) {
+  pub fn set_size(&mut self, width: f32, height: f32) -> PyResult<()> {
+    finite_floats(&[width, height])?;
     self.reset_size((width, height));
+    Ok(())
   }
 
   pub fn reset(&mut self) {
@@ -68,16 +70,22 @@ impl Context2D {
     Ok(())
   }
 
-  pub fn translate(&mut self, x: f32, y: f32) {
+  pub fn translate(&mut self, x: f32, y: f32) -> PyResult<()> {
+    finite_floats(&[x, y])?;
     self.with_matrix(|ctm| ctm.pre_translate((x, y)));
+    Ok(())
   }
 
-  pub fn scale(&mut self, x: f32, y: f32) {
+  pub fn scale(&mut self, x: f32, y: f32) -> PyResult<()> {
+    finite_floats(&[x, y])?;
     self.with_matrix(|ctm| ctm.pre_scale((x, y), None));
+    Ok(())
   }
 
-  pub fn rotate(&mut self, angle: f32) {
+  pub fn rotate(&mut self, angle: f32) -> PyResult<()> {
+    finite_float(angle)?;
     self.with_matrix(|ctm| ctm.pre_rotate(angle.to_degrees(), None));
+    Ok(())
   }
 
   pub fn reset_transform(&mut self) {
@@ -85,6 +93,9 @@ impl Context2D {
   }
 
   pub fn create_projection(&mut self, dst: Vec<f32>, src: Vec<f32>) -> PyResult<Vec<f32>> {
+    finite_floats(&dst)?;
+    finite_floats(&src)?;
+
     let dst_len = dst.len();
     let src_len = src.len();
     let dst = to_points(dst).ok_or_else(|| {
@@ -162,7 +173,8 @@ impl Context2D {
 
   // -- primitives ------------------------------------------------------------------------
 
-  pub fn rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
+  pub fn rect(&mut self, x: f32, y: f32, width: f32, height: f32) -> PyResult<()> {
+    finite_floats(&[x, y, width, height])?;
     let rect = Rect::from_xywh(x, y, width, height);
     let quad = self.state.matrix.map_rect_to_quad(rect);
     self.path.move_to(quad[0]);
@@ -170,6 +182,7 @@ impl Context2D {
     self.path.line_to(quad[2]);
     self.path.line_to(quad[3]);
     self.path.close();
+    Ok(())
   }
 
   pub fn round_rect(
@@ -186,7 +199,21 @@ impl Context2D {
     bottom_right_radius_y: f32,
     bottom_left_radius_x: f32,
     bottom_left_radius_y: f32,
-  ) {
+  ) -> PyResult<()> {
+    finite_floats(&[
+      x,
+      y,
+      width,
+      height,
+      top_left_radius_x,
+      top_left_radius_y,
+      top_right_radius_x,
+      top_right_radius_y,
+      bottom_right_radius_x,
+      bottom_right_radius_y,
+      bottom_left_radius_x,
+      bottom_left_radius_y,
+    ])?;
     let rect = Rect::from_xywh(x, y, width, height);
     let radii = [
       Point::new(top_left_radius_x, top_left_radius_y),
@@ -206,6 +233,7 @@ impl Context2D {
     self
       .path
       .add_path(&path.with_transform(&matrix), (0, 0), Extend);
+    Ok(())
   }
 
   pub fn arc(
@@ -216,7 +244,8 @@ impl Context2D {
     start_angle: f32,
     end_angle: f32,
     counterclockwise: bool,
-  ) {
+  ) -> PyResult<()> {
+    finite_floats(&[x, y, radius, start_angle, end_angle])?;
     let matrix = self.state.matrix;
     let mut arc = Path2D::default();
     arc.add_ellipse(
@@ -230,6 +259,7 @@ impl Context2D {
     self
       .path
       .add_path(&arc.path.with_transform(&matrix), (0, 0), Extend);
+    Ok(())
   }
 
   pub fn ellipse(
@@ -243,9 +273,11 @@ impl Context2D {
     end_angle: f32,
     counterclockwise: bool,
   ) -> PyResult<()> {
+    finite_floats(&[x, y, radius_x, radius_y, rotation, start_angle, end_angle])?;
+
     if radius_x < 0.0 || radius_y < 0.0 {
       return Err(pyo3::exceptions::PyValueError::new_err(
-        "Radius values must be positive",
+        "Radius value must be positive",
       ));
     }
     let matrix = self.state.matrix;
@@ -266,21 +298,27 @@ impl Context2D {
 
   // contour drawing ----------------------------------------------------------------------
 
-  pub fn move_to(&mut self, x: f32, y: f32) {
+  pub fn move_to(&mut self, x: f32, y: f32) -> PyResult<()> {
+    finite_floats(&[x, y])?;
     let xy = vec![x, y];
     if let Some(dst) = self.map_points(&xy).first() {
       self.path.move_to(*dst);
     }
+    Ok(())
   }
 
-  pub fn line_to(&mut self, x: f32, y: f32) {
+  pub fn line_to(&mut self, x: f32, y: f32) -> PyResult<()> {
+    finite_floats(&[x, y])?;
     let xy = vec![x, y];
     if let Some(dst) = self.map_points(&xy).first() {
       self.path.line_to(*dst);
     }
+    Ok(())
   }
 
   pub fn arc_to(&mut self, x1: f32, y1: f32, x2: f32, y2: f32, radius: f32) -> PyResult<()> {
+    finite_floats(&[x1, y1, x2, y2, radius])?;
+
     let coords = vec![x1, y1, x2, y2];
     if radius < 0.0 {
       return Err(pyo3::exceptions::PyValueError::new_err(
@@ -295,28 +333,49 @@ impl Context2D {
     Ok(())
   }
 
-  pub fn bezier_curve_to(&mut self, cp1x: f32, cp1y: f32, cp2x: f32, cp2y: f32, x: f32, y: f32) {
+  pub fn bezier_curve_to(
+    &mut self,
+    cp1x: f32,
+    cp1y: f32,
+    cp2x: f32,
+    cp2y: f32,
+    x: f32,
+    y: f32,
+  ) -> PyResult<()> {
+    finite_floats(&[cp1x, cp1y, cp2x, cp2y, x, y])?;
     let coords = vec![cp1x, cp1y, cp2x, cp2y, x, y];
     if let [cp1, cp2, dst] = self.map_points(&coords)[..3] {
       self.scoot(cp1);
       self.path.cubic_to(cp1, cp2, dst);
     }
+    Ok(())
   }
 
-  pub fn quadratic_curve_to(&mut self, cpx: f32, cpy: f32, x: f32, y: f32) {
+  pub fn quadratic_curve_to(&mut self, cpx: f32, cpy: f32, x: f32, y: f32) -> PyResult<()> {
+    finite_floats(&[cpx, cpy, x, y])?;
     let coords = vec![cpx, cpy, x, y];
     if let [cp, dst] = self.map_points(&coords)[..2] {
       self.scoot(cp);
       self.path.quad_to(cp, dst);
     }
+    Ok(())
   }
 
-  pub fn conic_curve_to(&mut self, cpx: f32, cpy: f32, x: f32, y: f32, weight: f32) {
+  pub fn conic_curve_to(
+    &mut self,
+    cpx: f32,
+    cpy: f32,
+    x: f32,
+    y: f32,
+    weight: f32,
+  ) -> PyResult<()> {
+    finite_floats(&[cpx, cpy, x, y, weight])?;
     let coords = vec![cpx, cpy, x, y];
     if let [src, dst] = self.map_points(&coords).as_slice() {
       self.scoot(*src);
       self.path.conic_to(*src, *dst, weight);
     }
+    Ok(())
   }
 
   pub fn close_path(&mut self) {
@@ -331,10 +390,12 @@ impl Context2D {
     y: f32,
     fill_rule: Option<String>,
   ) -> PyResult<bool> {
+    finite_floats(&[x, y])?;
     self._is_in(path, x, y, fill_rule, Fill)
   }
 
   pub fn is_point_in_stroke(&mut self, path: Option<&Path2D>, x: f32, y: f32) -> PyResult<bool> {
+    finite_floats(&[x, y])?;
     self._is_in(path, x, y, None, Stroke)
   }
 
@@ -367,22 +428,28 @@ impl Context2D {
     self.draw_path(path, PaintStyle::Stroke, None);
   }
 
-  pub fn fill_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
+  pub fn fill_rect(&mut self, x: f32, y: f32, width: f32, height: f32) -> PyResult<()> {
+    finite_floats(&[x, y, width, height])?;
     let rect = Rect::from_xywh(x, y, width, height);
     let path = Path::rect(rect, None);
     self.draw_path(Some(path), PaintStyle::Fill, None);
+    Ok(())
   }
 
-  pub fn stroke_rect(&mut self, x: f32, y: f32, width: f32, height: f32) {
+  pub fn stroke_rect(&mut self, x: f32, y: f32, width: f32, height: f32) -> PyResult<()> {
+    finite_floats(&[x, y, width, height])?;
     let rect = Rect::from_xywh(x, y, width, height);
     let path = Path::rect(rect, None);
     self.draw_path(Some(path), PaintStyle::Stroke, None);
+    Ok(())
   }
 
   #[pyo3(name = "clear_rect")]
-  pub fn clear_rect_py(&mut self, x: f32, y: f32, width: f32, height: f32) {
+  pub fn clear_rect_py(&mut self, x: f32, y: f32, width: f32, height: f32) -> PyResult<()> {
+    finite_floats(&[x, y, width, height])?;
     let rect = Rect::from_xywh(x, y, width, height);
     self.clear_rect(&rect);
+    Ok(())
   }
 
   // fill & stoke properties --------------------------------------------------------------
@@ -439,11 +506,19 @@ impl Context2D {
     self.state.line_dash_list.clone()
   }
 
-  pub fn set_line_dash(&mut self, mut segments: Vec<f32>) {
-    if segments.len() % 2 == 1 {
-      segments.append(&mut segments.clone());
+  pub fn set_line_dash(&mut self, segments: Vec<f32>) -> PyResult<()> {
+    let mut intervals = segments
+      .iter()
+      .cloned()
+      .filter(|n| *n >= 0.0 && n.is_finite())
+      .collect::<Vec<f32>>();
+    if intervals.len() == segments.len() {
+      if intervals.len() % 2 == 1 {
+        intervals.append(&mut intervals.clone());
+      }
+      self.state.line_dash_list = intervals;
     }
-    self.state.line_dash_list = segments;
+    Ok(())
   }
 
   // line style properties  -----------------------------------------------------------
@@ -463,8 +538,10 @@ impl Context2D {
     self.state.line_dash_offset
   }
 
-  pub fn set_line_dash_offset(&mut self, offset: f32) {
+  pub fn set_line_dash_offset(&mut self, offset: f32) -> PyResult<()> {
+    finite_float(offset)?;
     self.state.line_dash_offset = offset;
+    Ok(())
   }
 
   pub fn get_line_join(&self) -> String {
@@ -482,25 +559,29 @@ impl Context2D {
     self.state.paint.stroke_width()
   }
 
-  pub fn set_line_width(&mut self, num: f32) {
-    if num > 0.0 {
+  pub fn set_line_width(&mut self, num: f32) -> PyResult<()> {
+    if num.is_finite() && num > 0.0 {
       self.state.paint.set_stroke_width(num);
       self.state.stroke_width = num;
     }
+    Ok(())
   }
 
   pub fn get_miter_limit(&self) -> f32 {
     self.state.paint.stroke_miter()
   }
 
-  pub fn set_miter_limit(&mut self, num: f32) {
-    if num > 0.0 {
+  pub fn set_miter_limit(&mut self, num: f32) -> PyResult<()> {
+    if num.is_finite() && num > 0.0 {
       self.state.paint.set_stroke_miter(num);
     }
+    Ok(())
   }
 
   #[pyo3(name = "draw_image")]
   pub fn draw_image_py(&mut self, source: ImageValue, nums: Vec<f32>) -> PyResult<()> {
+    finite_floats(&nums)?;
+
     let (content, fit_to_canvas) = match source {
       ImageValue::Image(img) => (img.content.clone(), img.autosized),
       ImageValue::Context2D(mut ctx) => (Content::from_context(&mut ctx, false), false),
@@ -540,8 +621,10 @@ impl Context2D {
     Ok(())
   }
 
-  pub fn draw_canvas(&mut self, context: &mut Context2D, nums: Vec<f32>) -> PyResult<()> {
-    let content = Content::from_context(context, true);
+  pub fn draw_canvas(&mut self, context: Option<&mut Context2D>, nums: Vec<f32>) -> PyResult<()> {
+    finite_floats(&nums)?;
+
+    let content = Content::from_context(context.unwrap_or(self), true);
     if let Content::Vector(pict, size) = &content {
       let (src, dst) = _layout_rects(*size, &nums)?;
       let (src, dst) = content.snap_rects_to_bounds(src, dst);
@@ -563,6 +646,8 @@ impl Context2D {
     opts: Option<ImageDataExportArg>,
     canvas: &mut Canvas,
   ) -> PyResult<Vec<u8>> {
+    finite_floats(&[x, y, width, height])?;
+
     let mut x = x.floor();
     let mut y = y.floor();
     let mut w = width.floor();
@@ -604,7 +689,16 @@ impl Context2D {
     Ok(data)
   }
 
-  pub fn put_image_data(&mut self, img_data: ImageData, x: f32, y: f32, mut dirty: Vec<f32>) {
+  pub fn put_image_data(
+    &mut self,
+    img_data: ImageData,
+    x: f32,
+    y: f32,
+    mut dirty: Vec<f32>,
+  ) -> PyResult<()> {
+    finite_floats(&[x, y])?;
+    finite_floats(&dirty)?;
+
     let (src, dst) = match dirty.as_mut_slice() {
       [dx, dy, dw, dh] => {
         // negative dimensions are valid, just shift the origin and absify
@@ -628,6 +722,7 @@ impl Context2D {
     };
 
     self.blit_pixels(img_data, &src, &dst);
+    Ok(())
   }
 
   // -- image properties --------------------------------------------------------------
@@ -654,24 +749,42 @@ impl Context2D {
   // Typography
   //
 
-  pub fn fill_text(&mut self, text: String, x: f32, y: f32, width: Option<f32>) {
+  pub fn fill_text(&mut self, text: String, x: f32, y: f32, width: Option<f32>) -> PyResult<()> {
+    finite_floats(&[x, y])?;
+    if let Some(n) = width {
+      if !n.is_finite() {
+        return Ok(());
+      }
+    }
     self.draw_text(&text, x, y, width, Fill);
+    Ok(())
   }
 
-  pub fn stroke_text(&mut self, text: String, x: f32, y: f32, width: Option<f32>) {
+  pub fn stroke_text(&mut self, text: String, x: f32, y: f32, width: Option<f32>) -> PyResult<()> {
+    finite_floats(&[x, y])?;
+    if let Some(n) = width {
+      if !n.is_finite() {
+        return Ok(());
+      }
+    }
     self.draw_text(&text, x, y, width, Stroke);
+    Ok(())
   }
 
   #[pyo3(name = "measure_text")]
-  pub fn measure_text_py(&mut self, text: String, width: Option<f32>) -> String {
+  pub fn measure_text_py(&mut self, text: String, width: Option<f32>) -> PyResult<String> {
+    let width = width.and_then(|n| match n.is_finite() {
+      true => Some(n),
+      false => None,
+    });
     let text_matrics = self.measure_text(&text, width);
-    text_matrics.to_string()
+    Ok(text_matrics.to_string())
   }
 
   #[pyo3(name = "outline_text")]
-  pub fn outline_text_py(&mut self, text: String, width: Option<f32>) -> Path2D {
+  pub fn outline_text_py(&mut self, text: String, width: Option<f32>) -> PyResult<Path2D> {
     let path = self.outline_text(&text, width);
-    Path2D { path }
+    Ok(Path2D { path })
   }
 
   // -- type properties ---------------------------------------------------------------
@@ -839,10 +952,12 @@ impl Context2D {
     self.state.shadow_blur
   }
 
-  pub fn set_shadow_blur(&mut self, num: f32) {
+  pub fn set_shadow_blur(&mut self, num: f32) -> PyResult<()> {
+    finite_float(num)?;
     if num >= 0.0 {
       self.state.shadow_blur = num;
     }
+    Ok(())
   }
 
   pub fn get_shadow_color(&self) -> String {
@@ -864,12 +979,16 @@ impl Context2D {
     self.state.shadow_offset.y
   }
 
-  pub fn set_shadow_offset_x(&mut self, num: f32) {
+  pub fn set_shadow_offset_x(&mut self, num: f32) -> PyResult<()> {
+    finite_float(num)?;
     self.state.shadow_offset.x = num;
+    Ok(())
   }
 
-  pub fn set_shadow_offset_y(&mut self, num: f32) {
+  pub fn set_shadow_offset_y(&mut self, num: f32) -> PyResult<()> {
+    finite_float(num)?;
     self.state.shadow_offset.y = num;
+    Ok(())
   }
 }
 
@@ -882,6 +1001,8 @@ impl Context2D {
     fill_rule: Option<String>,
     style: PaintStyle,
   ) -> PyResult<bool> {
+    finite_floats(&[x, y])?;
+
     let path = path.map(|p| p.path.clone());
     let mut target = match path {
       Some(p) => p,
@@ -901,6 +1022,9 @@ impl Context2D {
 }
 
 fn _layout_rects(intrinsic: Size, nums: &[f32]) -> PyResult<(Rect, Rect)> {
+  finite_floats(nums)?;
+  finite_floats(&[intrinsic.width, intrinsic.height])?;
+
   let (src, dst) = match nums.len() {
     2 => (
       Rect::from_xywh(0.0, 0.0, intrinsic.width, intrinsic.height),

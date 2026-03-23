@@ -1,3 +1,4 @@
+import math
 import pathlib
 import re
 from urllib.parse import ParseResult
@@ -98,21 +99,27 @@ class ImageData:
     )
 
     @overload
-    def __init__(self, width: int, height: int, /) -> None: ...
+    def __init__(self, width: int | float, height: int | float, /) -> None: ...
     @overload
     def __init__(
-        self, width: int, height: int, option: ImageDataSettings | None, /
+        self,
+        width: int | float,
+        height: int | float,
+        option: ImageDataSettings | None,
+        /,
     ) -> None: ...
     @overload
-    def __init__(self, buffer: bytes, width: int, /) -> None: ...
+    def __init__(self, buffer: bytes, width: int | float, /) -> None: ...
     @overload
-    def __init__(self, buffer: bytes, width: int, height: int, /) -> None: ...
+    def __init__(
+        self, buffer: bytes, width: int | float, height: int | float, /
+    ) -> None: ...
     @overload
     def __init__(
         self,
         buffer: bytes,
-        width: int,
-        height: int,
+        width: int | float,
+        height: int | float,
         option: ImageDataSettings | None,
         /,
     ) -> None: ...
@@ -148,8 +155,8 @@ class ImageData:
             )
         elif isinstance(args[0], bytes):
             data = bytearray(args[0])
-            width = int(args[1])
-            height = int(args[2]) if len(args) > 2 else 0
+            width = int(abs(args[1]))
+            height = int(abs(args[2])) if len(args) > 2 else 0
             option = args[3] if len(args) > 3 and args[3] else {}
             color_space = option.get("color_space", "srgb")
             color_type = option.get("color_type", "rgba")
@@ -161,8 +168,8 @@ class ImageData:
                     "Buffer size does not match width, height and color type"
                 )
         else:
-            width = int(args[0])
-            height = int(args[1])
+            width = int(abs(args[0]))
+            height = int(abs(args[1]))
             option = args[2] if len(args) > 2 and args[2] else {}
             color_space = option.get("color_space", "srgb")
             color_type = option.get("color_type", "rgba")
@@ -171,8 +178,13 @@ class ImageData:
 
         if color_space not in ["srgb"]:
             raise ValueError(f"Unsupported color space: {color_space}")
-        if width < 0 or height < 0:
-            raise ValueError("Width and height must be non-negative")
+        if (
+            (not isinstance(width, int) and not math.isnan(width))
+            or (not isinstance(height, int) and not math.isnan(height))
+            or width <= 0
+            or height <= 0
+        ):
+            raise ValueError("Dimensions must be non-zero")
 
         self.__color_space: str = color_space
         self.__color_type: str = color_type

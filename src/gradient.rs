@@ -150,7 +150,8 @@ impl CanvasGradient {
 #[pymethods]
 impl CanvasGradient {
   #[staticmethod]
-  pub fn linear(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
+  pub fn linear(x1: f32, y1: f32, x2: f32, y2: f32) -> PyResult<Self> {
+    finite_floats(&[x1, y1, x2, y2])?;
     let start = Point::new(x1, y1);
     let end = Point::new(x2, y2);
     let ramp = Gradient::Linear {
@@ -159,13 +160,14 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    CanvasGradient {
+    Ok(CanvasGradient {
       gradient: Rc::new(RefCell::new(ramp)),
-    }
+    })
   }
 
   #[staticmethod]
-  pub fn radial(x1: f32, y1: f32, r1: f32, x2: f32, y2: f32, r2: f32) -> Self {
+  pub fn radial(x1: f32, y1: f32, r1: f32, x2: f32, y2: f32, r2: f32) -> PyResult<Self> {
+    finite_floats(&[x1, y1, r1, x2, y2, r2])?;
     let start_point = Point::new(x1, y1);
     let end_point = Point::new(x2, y2);
     let bloom = Gradient::Radial {
@@ -176,13 +178,14 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    CanvasGradient {
+    Ok(CanvasGradient {
       gradient: Rc::new(RefCell::new(bloom)),
-    }
+    })
   }
 
   #[staticmethod]
-  pub fn conic(theta: f32, x: f32, y: f32) -> Self {
+  pub fn conic(theta: f32, x: f32, y: f32) -> PyResult<Self> {
+    finite_floats(&[theta, x, y])?;
     let center = Point::new(x, y);
     let angle = to_degrees(theta);
     let swirl = Gradient::Conic {
@@ -191,14 +194,14 @@ impl CanvasGradient {
       stops: vec![],
       colors: vec![],
     };
-    CanvasGradient {
+    Ok(CanvasGradient {
       gradient: Rc::new(RefCell::new(swirl)),
-    }
+    })
   }
 
   #[pyo3(name = "add_color_stop")]
   pub fn add_color_stop_py(&mut self, offset: f32, color: &str) -> PyResult<()> {
-    if offset < 0.0 || offset > 1.0 {
+    if !offset.is_finite() || offset < 0.0 || offset > 1.0 {
       return Err(pyo3::exceptions::PyValueError::new_err(
         "Color stop offsets must be between 0.0 and 1.0",
       ));
