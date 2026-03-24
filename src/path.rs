@@ -7,7 +7,7 @@ use skia_safe::{
 use skia_safe::{PathEffect, trim_path_effect};
 use std::f32::consts::PI;
 
-use crate::utils::{to_degrees, to_matrix};
+use crate::utils::{finite_floats, to_degrees, to_matrix};
 
 #[pyclass(unsendable)]
 pub struct Path2D {
@@ -126,9 +126,12 @@ impl Path2D {
   }
 
   /// Adds a path to the current path.
-  pub fn add_path(&mut self, other: Option<&Path2D>, transform: Option<Vec<f32>>) {
+  pub fn add_path(&mut self, other: Option<&Path2D>, transform: Option<Vec<f32>>) -> PyResult<()> {
     let matrix = match transform {
-      Some(t) => to_matrix(&t).unwrap_or_else(Matrix::new_identity),
+      Some(t) => {
+        finite_floats(&t)?;
+        to_matrix(&t).unwrap_or_else(Matrix::new_identity)
+      }
       None => Matrix::new_identity(),
     };
 
@@ -145,6 +148,8 @@ impl Path2D {
           .add_path_matrix(&src, &matrix, AddPathMode::Append);
       }
     };
+
+    Ok(())
   }
 
   /// Causes the point of the pen to move back to the start of the current sub-path. It tries to draw a straight line from the current point to the start. If the shape has already been closed or has only one point, this function does nothing.
@@ -361,6 +366,7 @@ impl Path2D {
 
   /// Returns a copy whose points have been transformed by a given matrix
   pub fn transform(&self, matrix: Vec<f32>) -> PyResult<Self> {
+    finite_floats(&matrix)?;
     let matrix = to_matrix(&matrix).ok_or_else(|| {
       pyo3::exceptions::PyValueError::new_err("Matrix must be a 6 or 9 element array")
     })?;

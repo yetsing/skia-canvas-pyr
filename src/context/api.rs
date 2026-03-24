@@ -63,6 +63,7 @@ impl Context2D {
   }
 
   pub fn transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {
+    finite_floats(&matrix)?;
     let matrix = to_matrix(&matrix).ok_or_else(|| {
       pyo3::exceptions::PyValueError::new_err("Matrix must be a 6 or 9 element array")
     })?;
@@ -156,6 +157,7 @@ impl Context2D {
   }
 
   pub fn set_current_transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {
+    finite_floats(&matrix)?;
     let matrix = to_matrix(&matrix).ok_or_else(|| {
       pyo3::exceptions::PyValueError::new_err("Matrix must be a 6 or 9 element array")
     })?;

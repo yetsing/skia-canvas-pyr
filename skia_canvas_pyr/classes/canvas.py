@@ -73,7 +73,7 @@ class Canvas:
     @width.setter
     def width(self, value: float | None) -> None:
         self.__canvas.set_width(
-            value if value and math.isfinite(value) and value >= 0 else 300
+            value if value is not None and math.isfinite(value) and value >= 0 else 300
         )
         if self.__contexts:
             self.__contexts[0].raw_reset_size()
@@ -85,7 +85,7 @@ class Canvas:
     @height.setter
     def height(self, value: float | None) -> None:
         self.__canvas.set_height(
-            value if value and math.isfinite(value) and value >= 0 else 150
+            value if value is not None and math.isfinite(value) and value >= 0 else 150
         )
         if self.__contexts:
             self.__contexts[0].raw_reset_size()

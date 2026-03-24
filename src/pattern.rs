@@ -159,6 +159,7 @@ impl CanvasPattern {
   }
 
   pub fn set_transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {
+    finite_floats(&matrix)?;
     let matrix = match to_matrix(&matrix) {
       Some(m) => m,
       None => {

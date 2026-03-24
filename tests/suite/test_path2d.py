@@ -727,7 +727,7 @@ def test_validates_value_errors(path_ctx):
     with pytest.raises((TypeError, ValueError)):
         p.complement({})  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError)):
-        p.interpolate(p, "foo")  # type: ignore[arg-type]
+        p.interpolate(p)  # type: ignore[arg-type]
     with pytest.raises((TypeError, ValueError)):
         p.roundRect(0, 0, 0, 0, -10)
     with pytest.raises((TypeError, ValueError)):

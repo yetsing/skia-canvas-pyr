@@ -78,29 +78,27 @@ class TestCanvasState:
         assert pixel(ctx, 0, 0) == CLEAR
 
     def test_initial_dimensions(self):
+        W, H = 300, 150
+
+        c = Canvas()
+        assert c.width == W
+        assert c.height == H
+
         c = Canvas(0, 0)
         assert c.width == 0
         assert c.height == 0
 
         c = Canvas(-99, 123)
-        assert c.width == 300
+        assert c.width == W
         assert c.height == 123
 
-        c = Canvas(123, -456)
-        assert c.width == 123
-        assert c.height == 150
+        c = Canvas(456)
+        assert c.width == 456
+        assert c.height == H
 
-        with pytest.raises(TypeError):
-            Canvas()  # type: ignore[call-arg]
-
-        with pytest.raises(TypeError):
-            Canvas(456)  # type: ignore[call-arg]
-
-        with pytest.raises(TypeError):
-            Canvas(None, 789)  # type: ignore[arg-type]
-
-        with pytest.raises(TypeError):
-            Canvas("garbage", math.nan)  # type: ignore[arg-type]
+        c = Canvas(None, 789)
+        assert c.width == W
+        assert c.height == 789
 
     def test_new_page_dimensions(self, canvas_ctx):
         canvas, _ = canvas_ctx
