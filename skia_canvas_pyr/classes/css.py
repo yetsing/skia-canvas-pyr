@@ -559,7 +559,7 @@ def parseFilter(text):
             dims = [parseSize(s) for s in lengths]
             dims = [d for d in dims if _is_finite(d)]
             if len(dims) == 3 and bool(color):
-                filters[kind] = [*dims, color]
+                filters[kind] = (*dims, color)
                 canonical.append(
                     f"{kind}({' '.join(lengths)} {color.replace(' ', '')})"
                 )
@@ -568,11 +568,13 @@ def parseFilter(text):
         m = plainFilterRE.search(spec)
         if m:
             kind, arg = m.group(1), m.group(2)
-            val = (
-                parseSize(arg)
-                if kind == "blur"
-                else parseAngle(arg) if kind == "hue-rotate" else parsePercentage(arg)
-            )
+            match kind:
+                case "blur":
+                    val = parseSize(arg)
+                case "hue-rotate":
+                    val = parseAngle(arg)
+                case _:
+                    val = parsePercentage(arg)
             if _is_finite(val):
                 filters[kind] = val
                 canonical.append(f"{kind}({arg.strip()})")
@@ -601,19 +603,15 @@ def parseAngle(text):
     if m:
         amt = float(m.group(1))
         unit = m.group(2)
-        return (
-            amt
-            if unit == "deg"
-            else (
-                360 * amt / (2 * math.pi)
-                if unit == "rad"
-                else (
-                    360 * amt / 400
-                    if unit == "grad"
-                    else 360 * amt if unit == "turn" else math.nan
-                )
-            )
-        )
+        match unit:
+            case "deg":
+                return amt
+            case "rad":
+                return 360 * amt / (2 * math.pi)
+            case "grad":
+                return 360 * amt / 400
+            case "turn":
+                return 360 * amt
     return math.nan
 
 

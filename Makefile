@@ -22,4 +22,7 @@ fmt:
 	uvx black skia_canvas_pyr/ tests/
 
 test:
-	.venv/bin/pytest
+	uv run pytest
+
+visual:
+	uv run python tests/visual/index.py

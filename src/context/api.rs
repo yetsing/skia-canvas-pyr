@@ -62,13 +62,10 @@ impl Context2D {
     self.pop();
   }
 
-  pub fn transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {
-    finite_floats(&matrix)?;
-    let matrix = to_matrix(&matrix).ok_or_else(|| {
-      pyo3::exceptions::PyValueError::new_err("Matrix must be a 6 or 9 element array")
-    })?;
-    self.with_matrix(|ctm| ctm.pre_concat(&matrix));
-    Ok(())
+  pub fn transform(&mut self, matrix: Vec<f32>) {
+    if let Some(matrix) = opt_finite_matrix(&matrix) {
+      self.with_matrix(|ctm| ctm.pre_concat(&matrix));
+    }
   }
 
   pub fn translate(&mut self, x: f32, y: f32) -> PyResult<()> {
@@ -156,13 +153,10 @@ impl Context2D {
     array
   }
 
-  pub fn set_current_transform(&mut self, matrix: Vec<f32>) -> PyResult<()> {
-    finite_floats(&matrix)?;
-    let matrix = to_matrix(&matrix).ok_or_else(|| {
-      pyo3::exceptions::PyValueError::new_err("Matrix must be a 6 or 9 element array")
-    })?;
-    self.with_matrix(|ctm| ctm.reset().pre_concat(&matrix));
-    Ok(())
+  pub fn set_current_transform(&mut self, matrix: Vec<f32>) {
+    if let Some(matrix) = opt_finite_matrix(&matrix) {
+      self.with_matrix(|ctm| ctm.reset().pre_concat(&matrix));
+    }
   }
 
   //
@@ -581,13 +575,16 @@ impl Context2D {
   }
 
   #[pyo3(name = "draw_image")]
-  pub fn draw_image_py(&mut self, source: ImageValue, nums: Vec<f32>) -> PyResult<()> {
+  pub fn draw_image_py(&mut self, source: Option<ImageValue>, nums: Vec<f32>) -> PyResult<()> {
     finite_floats(&nums)?;
 
     let (content, fit_to_canvas) = match source {
-      ImageValue::Image(img) => (img.content.clone(), img.autosized),
-      ImageValue::Context2D(mut ctx) => (Content::from_context(&mut ctx, false), false),
-      ImageValue::ImageData(data) => (Content::from_image_data(data), false),
+      None => (Content::from_context(self, false), false),
+      Some(source) => match source {
+        ImageValue::Image(img) => (img.content.clone(), img.autosized),
+        ImageValue::Context2D(mut ctx) => (Content::from_context(&mut ctx, false), false),
+        ImageValue::ImageData(data) => (Content::from_image_data(data), false),
+      },
     };
 
     if let Content::Bitmap(img) = &content {

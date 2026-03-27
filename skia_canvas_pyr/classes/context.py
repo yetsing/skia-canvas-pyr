@@ -99,8 +99,14 @@ class CanvasRenderingContext2D:
     def getTransform(self) -> DOMMatrix:
         return self.currentTransform
 
-    def setTransform(self, matrix: Matrix) -> None:
-        self.__context.set_current_transform(toSkMatrix(matrix))
+    @overload
+    def setTransform(
+        self, a: float, b: float, c: float, d: float, e: float, f: float, /
+    ) -> None: ...
+    @overload
+    def setTransform(self, matrix: Matrix, /) -> None: ...
+    def setTransform(self, *args) -> None:
+        self.__context.set_current_transform(toSkMatrix(*args))
 
     @overload
     def transform(self, transform: Matrix, /) -> None: ...
@@ -387,7 +393,7 @@ class CanvasRenderingContext2D:
 
     @fillStyle.setter
     def fillStyle(
-        self, value: str | CanvasGradient | CanvasPattern | CanvasTexture
+        self, value: str | CanvasGradient | CanvasPattern | CanvasTexture | None
     ) -> None:
         if isinstance(value, (CanvasGradient, CanvasPattern, CanvasTexture)):
             self.__context.set_fill_style(value.core())
@@ -626,10 +632,14 @@ class CanvasRenderingContext2D:
 
     def drawImage(self, image: Image | Canvas | ImageData, *coords: float) -> None:
         if isinstance(image, Canvas):
+            # 如果是同一个对象，传入 None ，避免 rust 端借用冲突
             source = image.getContext("2d")
             if source is None:
-                raise TypeError("Expected an Image or a Canvas argument")
-            self.__context.draw_image(source.core(), coords)
+                raise TypeError("Expected an Context2D from the source canvas")
+            ctx_rs = None
+            if source is not self:
+                ctx_rs = source.core()
+            self.__context.draw_image(ctx_rs, coords)
         elif isinstance(image, Image):
             if image.complete:
                 self.__context.draw_image(image.core(), coords)
@@ -674,11 +684,11 @@ class CanvasRenderingContext2D:
     def drawCanvas(self, image: Canvas, *coords: float) -> None:
         if isinstance(image, Canvas):
             # 如果是同一个对象，传入 None ，避免 rust 端借用冲突
+            source = image.getContext("2d")
+            if source is None:
+                raise TypeError("Expected an Context2D from the source canvas")
             ctx_rs = None
-            if self.canvas is not image:
-                source = image.getContext("2d")
-                if source is None:
-                    raise TypeError("Expected an Image or a Canvas argument")
+            if source is not self:
                 ctx_rs = source.core()
             self.__context.draw_canvas(ctx_rs, coords)
         else:

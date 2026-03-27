@@ -195,6 +195,14 @@ pub fn to_matrix(t: &[f32]) -> Option<Matrix> {
   }
 }
 
+pub fn opt_finite_matrix(t: &[f32]) -> Option<Matrix> {
+  if t.iter().all(|&v| finite_float(v).is_ok()) {
+    to_matrix(t)
+  } else {
+    None
+  }
+}
+
 /* #endregion */
 
 /* #region Points */

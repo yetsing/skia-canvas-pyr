@@ -78,3 +78,5 @@ docs/_build/
 
 index.pyi
 tests/assets
+tests/output.py
+tests/output.txt
