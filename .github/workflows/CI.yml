@@ -34,9 +34,9 @@ jobs:
           #   manylinux: manylinux_2_34
           #   os: linux
           #   target-triple: x86_64-unknown-linux-gnu
-          #   docker: ghcr.io/yetsing/canvas_pyr/ubuntu-builder:latest
+          #   docker: ghcr.io/yetsing/${{ github.repository }}/ubuntu-builder:latest
           #   build: |
-          #     bash scripts/build_linux_x86_64.sh
+          #     bash containers/build_linux.sh
           #   cargo_features: vulkan,window,freetype
           - runner: windows-latest
             target: x86_64
@@ -82,7 +82,16 @@ jobs:
         if: ${{ matrix.conf.docker }}
         with:
           image: ${{ matrix.conf.docker }}
-          options: --user 0:0 -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index -v ${{ github.workspace }}:/build -w /build -e python_version=${{ matrix.python-version }}
+          options: >
+            --user 0:0
+            -v ${{ github.workspace }}/.cargo-cache/git/db:/usr/local/cargo/git/db
+            -v ${{ github.workspace }}/.cargo/registry/cache:/usr/local/cargo/registry/cache
+            -v ${{ github.workspace }}/.cargo/registry/index:/usr/local/cargo/registry/index
+            -v ${{ github.workspace }}:/build
+            -w /build
+            -e python_version=${{ matrix.python-version }}
+            -e target_triple=${{ matrix.conf.target-triple }}
+            -e cargo_features=${{ matrix.conf.cargo_features }}
           run: ${{ matrix.conf.build }}
 
       - name: Install uv
