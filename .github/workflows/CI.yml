@@ -65,13 +65,8 @@ jobs:
         with:
           target: ${{ matrix.conf.target-triple }}
 
-      - name: Use Ninja macos
-        if: ${{ matrix.conf.os == 'macos'}}
-        uses: seanmiddleditch/gha-setup-ninja@master
-
-      - name: Install Ninja windows
-        if: ${{ matrix.conf.os == 'windows'}}
-        run: choco install ninja
+      - name: Check ninja
+        run: ninja --version
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
@@ -96,7 +91,6 @@ jobs:
 
       - name: Install built wheel and Test
         run: |
-          ls dist
           uv sync
           uv pip install skia-canvas-pyr --prerelease allow --no-index --find-links dist --reinstall
           uv run pytest
