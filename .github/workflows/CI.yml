@@ -37,18 +37,22 @@ jobs:
           #   docker: ghcr.io/yetsing/canvas_pyr/ubuntu-builder:latest
           #   build: |
           #     bash scripts/build_linux_x86_64.sh
+          #   cargo_features: vulkan,window,freetype
           - runner: windows-latest
             target: x86_64
             os: windows
             target-triple: x86_64-pc-windows-msvc
+            cargo_features: vulkan,window
           - runner: macos-15-intel
             target: x86_64
             os: macos
             target-triple: x86_64-apple-darwin
+            cargo_features: metal,window
           - runner: macos-latest
             target: aarch64
             os: macos
             target-triple: aarch64-apple-darwin
+            cargo_features: metal,window
 
     steps:
       - uses: actions/checkout@v6
@@ -74,7 +78,7 @@ jobs:
         if: ${{ !matrix.conf.docker }}
         with:
           target: ${{ matrix.conf.target }}
-          args: -i python${{ matrix.python-version }} --release --out dist --compatibility pypi
+          args: -i python${{ matrix.python-version }} --release --out dist --compatibility pypi --features "${{ matrix.conf.cargo_features }}"
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: ${{ matrix.conf.manylinux }}
 
@@ -92,6 +96,7 @@ jobs:
 
       - name: Install built wheel and Test
         run: |
+          ls dist
           uv sync
           uv pip install skia-canvas-pyr --prerelease allow --no-index --find-links dist --reinstall
           uv run pytest
