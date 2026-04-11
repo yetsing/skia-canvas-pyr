@@ -28,6 +28,11 @@ RUN apt-get update && \
   curl https://sh.rustup.rs -sSf | sh -s -- -y && \
   rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y -q \
+  git perl curl wget gpg software-properties-common pkg-config \
+  build-essential ninja-build cmake python3-venv lsb-release \
+  libexpat1-dev libpng-dev
+
 RUN echo "::group::Install maturin" && \
   curl -L ${MATURIN_URL} | tar -xz -C /usr/local/bin && \
   maturin --version
