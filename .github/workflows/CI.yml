@@ -6,13 +6,10 @@
 name: CI
 
 on:
+  workflow_dispatch:
   push:
-    branches:
-      - main
-      - master
     tags:
-      - '*'
-  pull_request:
+      - "v*"
   release:
     types:
       - published
