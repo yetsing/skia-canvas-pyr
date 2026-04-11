@@ -10,7 +10,9 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = ["version"]
-dependencies = [
+
+[dependency-groups]
+dev = [
     "pytest>=9.0.2",
     "tomli>=2.4.0",
 ]
