@@ -3,6 +3,10 @@ FROM messense/manylinux2014-cross:x86_64
 ARG LLVM_VERSION=22
 ARG MATURIN_URL="https://github.com/PyO3/maturin/releases/download/v1.11.5/maturin-x86_64-unknown-linux-musl.tar.gz"
 
+ENV RUSTUP_HOME=/usr/local/rustup \
+  CARGO_HOME=/usr/local/cargo \
+  PATH=/usr/local/cargo/bin:$PATH
+
 RUN apt-get update && \
   apt-get install -y --fix-missing --no-install-recommends gpg-agent ca-certificates openssl && \
   wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
