@@ -66,11 +66,11 @@ jobs:
           target: ${{ matrix.conf.target-triple }}
 
       - name: Use Ninja macos
-        if: ${{ matrix.os == 'macos'}}
+        if: ${{ matrix.conf.os == 'macos'}}
         uses: seanmiddleditch/gha-setup-ninja@master
 
       - name: Install Ninja windows
-        if: ${{ matrix.os == 'windows'}}
+        if: ${{ matrix.conf.os == 'windows'}}
         run: choco install ninja
 
       - name: Build wheels
