@@ -22,6 +22,7 @@ features = ["vulkan", "window", "freetype"]
 include = ["fonts"]
 
 [tool.uv]
+# uv 不要构建本项目
 package = false
 
 [tool.skia_canvas_pyr.upstream]
