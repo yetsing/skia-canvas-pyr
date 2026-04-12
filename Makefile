@@ -34,5 +34,5 @@ skia-version:
 with-local-skia:
 	echo '' >> Cargo.toml
 	echo '[patch.crates-io]' >> Cargo.toml
-	echo 'skia-safe = { path = "./rust-skia/skia-safe" }' >> Cargo.toml
-	echo 'skia-bindings = { path = "./rust-skia/skia-bindings" }' >> Cargo.toml
+	echo 'skia-safe = { path = "../rust-skia/skia-safe" }' >> Cargo.toml
+	echo 'skia-bindings = { path = "../rust-skia/skia-bindings" }' >> Cargo.toml
