@@ -42,6 +42,7 @@ jobs:
             manylinux: musllinux_1_1
             os: linux
             target-triple: x86_64-unknown-linux-musl
+            cargo_features: vulkan,window,freetype
           - runner: windows-latest
             target: x86_64
             os: windows
@@ -72,14 +73,14 @@ jobs:
       - name: Check ninja
         run: ninja --version
 
-      - name: Mock docker
-        if: ${{ matrix.conf.os == 'linux' }}
-        run: |
-          mkdir /tmp/fakebin
-          # 写入假 docker wrapper
-          mv containers/mock_docker.py /tmp/fakebin/docker
-          chmod +x /tmp/fakebin/docker
-          echo "/tmp/fakebin" >> $GITHUB_PATH  # 让 PATH 优先查 fakebin
+      # - name: Mock docker
+      #   if: ${{ matrix.conf.os == 'linux' }}
+      #   run: |
+      #     mkdir /tmp/fakebin
+      #     # 写入假 docker wrapper
+      #     mv containers/mock_docker.py /tmp/fakebin/docker
+      #     chmod +x /tmp/fakebin/docker
+      #     echo "/tmp/fakebin" >> $GITHUB_PATH  # 让 PATH 优先查 fakebin
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
