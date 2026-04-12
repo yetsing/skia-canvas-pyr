@@ -16,7 +16,7 @@ MAX_LINE = int(os.environ.get("MAX_LINE", 100))
 
 def can_print(path: Path) -> bool:
     if not path.exists() or path.is_dir():
-        return True
+        return False
 
     try:
         with path.open(encoding="utf-8") as f:
