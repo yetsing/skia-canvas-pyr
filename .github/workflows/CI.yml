@@ -66,6 +66,7 @@ jobs:
         run: ninja --version
 
       - name: Mock docker
+        if: ${{ matrix.conf.os == 'linux' }}
         run: |
           mkdir /tmp/fakebin
           # 写入假 docker wrapper
