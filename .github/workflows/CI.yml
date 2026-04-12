@@ -90,6 +90,7 @@ jobs:
           args: -i python${{ matrix.python-version }} --release --out dist --compatibility pypi --features "${{ matrix.conf.cargo_features }}"
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: ${{ matrix.conf.manylinux }}
+          before-script-linux: which python${{ matrix.python-version}}
 
       - name: Build wheels in docker
         uses: maus007/docker-run-action-fork@v1
