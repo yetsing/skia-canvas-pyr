@@ -28,13 +28,35 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Linux
+    - name: Build and push x86_64 container
       uses: docker/build-push-action@v6
       with:
-        file: containers/Dockerfile
+        tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/builder_x86_64:latest
         context: containers
+        file: containers/Dockerfile
         platforms: linux/amd64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
         push: true
-        tags: |
-          ghcr.io/yetsing/${{ github.repository }}/ubuntu-builder:${{ env.DOCKER_TAG }}
-          ghcr.io/yetsing/${{ github.repository }}/ubuntu-builder:latest
+
+    - name: Build and push aarch64 container
+      uses: docker/build-push-action@v6
+      with:
+        tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/builder_aarch64:latest
+        context: containers
+        file: containers/Dockerfile.aarch64
+        platforms: linux/arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        push: true
+
+    - name: Build and push musl
+      uses: docker/build-push-action@v6
+      with:
+        tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/builder-musl:latest
+        context: containers
+        file: containers/Dockerfile.musl
+        platforms: linux/amd64,linux/arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        push: true

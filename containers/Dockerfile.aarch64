@@ -1,4 +1,4 @@
-FROM messense/manylinux2014-cross:x86_64
+FROM messense/manylinux2014-cross:aarch64
 
 ARG LLVM_VERSION=22
 
