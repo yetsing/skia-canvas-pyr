@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         conf:
-          - {platform: linux/amd64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_x86_64:latest}
-          - {platform: linux/arm64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_aarch64:latest}
-          - {platform: linux/amd64, libc: musl, manylinux: quay.io/pypa/musllinux_1_2_x86_64:latest}
-          - {platform: linux/arm64, libc: musl, manylinux: quay.io/pypa/musllinux_1_2_aarch64:latest}
+          - {platform: linux/amd64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_x86_64:latest, arch: amd64}
+          - {platform: linux/arm64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_aarch64:latest, arch: arm64}
+          - {platform: linux/amd64, libc: musl, manylinux: quay.io/pypa/musllinux_1_2_x86_64:latest, arch: amd64}
+          - {platform: linux/arm64, libc: musl, manylinux: quay.io/pypa/musllinux_1_2_aarch64:latest, arch: arm64}
 
     steps:
     - name: Checkout
@@ -34,7 +34,7 @@ jobs:
     - name: Build and push
       uses: docker/build-push-action@v7
       with:
-        tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository }}/builder-${{ matrix.conf.libc }}:latest
+        tags: ghcr.io/${{ github.repository }}/builder-${{ matrix.conf.arch }}-${{ matrix.conf.libc }}:latest
         context: containers
         file: containers/Dockerfile.${{ matrix.conf.libc }}
         platforms: ${{ matrix.conf.platform }}
