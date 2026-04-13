@@ -44,6 +44,11 @@ RUN mkdir -p /opt/skia-static-libs && \
 
 # --------------------------------------------------------------------------------------------------------
 
+ARG MANYLINUX_IMAGE=quay.io/pypa/manylinux_2_28_x86_64:latest
+FROM ${MANYLINUX_IMAGE} as extractor
+
+# --------------------------------------------------------------------------------------------------------
+
 FROM python:slim-buster AS skia-build-env
 ARG TARGETARCH
 
@@ -66,6 +71,7 @@ RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 COPY --from=git /usr/local /usr/local
 COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
+COPY --from=extractor /opt /opt
 
 WORKDIR /opt
 
