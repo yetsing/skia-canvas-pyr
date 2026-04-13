@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -euo pipefail
+
+uv sync
+uv pip install skia-canvas-pyr --prerelease allow --no-index --find-links dist --reinstall
+uv run pytest
