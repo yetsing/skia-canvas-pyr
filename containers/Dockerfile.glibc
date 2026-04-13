@@ -5,7 +5,7 @@
 
 # --------------------------------------------------------------------------------------------------------
 
-ARG MANYLINUX_IMAGE=quay.io/pypa/manylinux_2_28_x86_64:latest
+ARG MANYLINUX_IMAGE
 FROM ${MANYLINUX_IMAGE} AS extractor
 
 # --------------------------------------------------------------------------------------------------------
@@ -71,6 +71,8 @@ RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 COPY --from=git /usr/local /usr/local
 COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
+
+# copy python
 COPY --from=extractor /opt /opt
 
 WORKDIR /opt

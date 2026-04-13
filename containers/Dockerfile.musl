@@ -1,3 +1,10 @@
+# --------------------------------------------------------------------------------------------------------
+
+ARG MANYLINUX_IMAGE
+FROM ${MANYLINUX_IMAGE} AS extractor
+
+# --------------------------------------------------------------------------------------------------------
+
 FROM python:3.12-alpine3.20
 ARG TARGETARCH
 
@@ -29,6 +36,9 @@ RUN mkdir -p /opt/skia-static-libs && \
 ARG GH_VERSION=2.76.2
 ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_$TARGETARCH.tar.gz
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
+
+# copy python
+COPY --from=extractor /opt /opt
 
 WORKDIR /opt
 CMD ["bash"]
