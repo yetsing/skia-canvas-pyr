@@ -44,7 +44,7 @@ RUN mkdir -p /opt/skia-static-libs && \
 
 # --------------------------------------------------------------------------------------------------------
 
-FROM python:buster-slim AS skia-build-env
+FROM python:slim-buster AS skia-build-env
 ARG TARGETARCH
 
 COPY sources.list-buster /etc/apt/sources.list
