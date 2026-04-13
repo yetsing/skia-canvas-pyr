@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   build_wheels:
-    name: ${{ matrix.conf.os }}-${{ matrix.conf.runner }}-${{ matrix.python-version }}-${{ matrix.conf.target }}
+    name: ${{ matrix.conf.os }}-${{ matrix.conf.runner }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}
     runs-on: ${{ matrix.conf.runner }}
     strategy:
       matrix:
@@ -145,7 +145,7 @@ jobs:
         uses: actions/upload-artifact@v6
         if: ${{ ( startsWith(github.ref, 'refs/tags/') ) }}
         with:
-          name: wheels-cp${{ matrix.python-version }}-${{ matrix.conf.os }}-${{ matrix.conf.target }}
+          name: wheels-cp${{ matrix.python-version }}-${{ matrix.conf.os }}-${{ matrix.conf.target-triple }}
           path: dist
 
   sdist:
