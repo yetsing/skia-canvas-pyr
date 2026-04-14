@@ -105,7 +105,7 @@ jobs:
         uses: PyO3/maturin-action@v1
         if: ${{ !matrix.conf.docker }}
         with:
-          target: ${{ matrix.conf.target }}
+          target: ${{ matrix.conf.target-triple }}
           args: -i python${{ matrix.python-version }} --release --out dist --compatibility pypi --features "${{ matrix.conf.cargo_features }}"
           container: ${{ matrix.conf.container }}
           before-script-linux: ${{ matrix.conf.before-script-linux }}
