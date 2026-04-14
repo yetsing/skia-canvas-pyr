@@ -9,6 +9,7 @@ FROM python:3.12-alpine3.20
 ARG TARGETARCH
 
 ENV RUSTFLAGS="-C target-feature=-crt-static" \
+    LIBCLANG_PATH="/usr/lib" \
     CC="clang" \
     CXX="clang++" \
     GN_EXE="gn" \
