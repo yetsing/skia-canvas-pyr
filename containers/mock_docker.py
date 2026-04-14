@@ -39,6 +39,9 @@ def main():
             print(f"--- {path} ---")
             print(path.read_text(encoding="utf-8"))
 
+    sys.stdout.flush()
+    sys.stderr.flush()
+
     docker = DOCKER_CMD
     os.execv(docker, [docker] + sys.argv[1:])
 
