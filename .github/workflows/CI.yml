@@ -90,14 +90,16 @@ jobs:
       - name: Check ninja
         run: ninja --version
 
-      # - name: Mock docker
-      #   if: ${{ matrix.conf.os == 'linux' }}
-      #   run: |
-      #     mkdir /tmp/fakebin
-      #     # 写入假 docker wrapper
-      #     mv containers/mock_docker.py /tmp/fakebin/docker
-      #     chmod +x /tmp/fakebin/docker
-      #     echo "/tmp/fakebin" >> $GITHUB_PATH  # 让 PATH 优先查 fakebin
+      - name: Mock docker
+        if: ${{ matrix.conf.os == 'linux' }}
+        run: |
+          DOCKER_CMD=$(command -v docker)
+          sed -i "s#{{DOCKER_CMD}}#${DOCKER_CMD}#g" containers/mock_docker.py
+          mkdir /tmp/fakebin
+          # 写入 docker wrapper
+          mv containers/mock_docker.py /tmp/fakebin/docker
+          chmod +x /tmp/fakebin/docker
+          echo "/tmp/fakebin" >> $GITHUB_PATH  # 让 PATH 优先查 fakebin
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
