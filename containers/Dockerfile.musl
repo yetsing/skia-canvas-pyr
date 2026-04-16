@@ -42,6 +42,7 @@ ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VER
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 
 # copy over results of previous build stage
+COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
 
 WORKDIR /opt
