@@ -6,9 +6,9 @@ ARG LLVM_VERSION=22
 FROM debian:bullseye-slim AS dependencies
 
 RUN apt-get update && apt-get install -y -q \
-    git perl curl wget gpg software-properties-common pkg-config \
+    git perl curl wget gpg zip software-properties-common pkg-config \
     build-essential ninja-build cmake python3-venv lsb-release \
-    libexpat1-dev libpng-dev
+    libexpat1-dev libpng-dev fonts-dejavu-core
 
 # install clang
 COPY install-llvm.sh .
@@ -25,15 +25,8 @@ RUN mkdir -p /opt/skia-static-libs && \
 
 # --------------------------------------------------------------------------------------------------------
 
-FROM ${MANYLINUX_IMAGE} AS skia-build-env
+FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
-
-RUN apt-get update && apt-get install -y -q \
-  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
-
-# install clang
-COPY install-llvm.sh .
-RUN bash install-llvm.sh $LLVM_VERSION
 
 # install gh
 ARG GH_VERSION=2.76.2
@@ -41,6 +34,7 @@ ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VER
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 
 # copy over results of previous build stage
+COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
 
 WORKDIR /opt
