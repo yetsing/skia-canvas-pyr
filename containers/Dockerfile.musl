@@ -1,15 +1,12 @@
-# --------------------------------------------------------------------------------------------------------
-
 ARG MANYLINUX_IMAGE
-FROM ${MANYLINUX_IMAGE} AS extractor
+ARG LLVM_VERSION=22
 
 # --------------------------------------------------------------------------------------------------------
 
-FROM python:3.12-alpine3.20
+FROM python:3.12-alpine3.20 AS dependencies
 ARG TARGETARCH
 
 ENV RUSTFLAGS="-C target-feature=-crt-static" \
-    LIBCLANG_PATH="/usr/lib" \
     CC="clang" \
     CXX="clang++" \
     GN_EXE="gn" \
@@ -33,13 +30,25 @@ RUN bash /opt/install-fontlibs.sh
 RUN mkdir -p /opt/skia-static-libs && \
     cp /usr/local/lib/libfontconfig.a /opt/skia-static-libs
 
+# --------------------------------------------------------------------------------------------------------
+
+FROM ${MANYLINUX_IMAGE}
+ARG TARGETARCH
+
+RUN apt-get update && apt-get install -y -q \
+  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
+
+# install clang
+COPY install-llvm.sh .
+RUN bash install-llvm.sh $LLVM_VERSION
+
 # install gh
 ARG GH_VERSION=2.76.2
 ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_$TARGETARCH.tar.gz
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 
-# copy python
-COPY --from=extractor /opt /opt
+# copy over results of previous build stage
+COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
 
 WORKDIR /opt
 CMD ["bash"]
