@@ -27,15 +27,21 @@ RUN mkdir -p /opt/skia-static-libs && \
 FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
 
-RUN echo "deb http://archive.ubuntu.com/ubuntu/ jammy main universe" >> /etc/apt/sources.list
-
-RUN apt-get update && apt-get install -y -q \
-  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
-
 # install clang
 ARG LLVM_VERSION=21
 COPY install-llvm.sh .
 RUN bash install-llvm.sh $LLVM_VERSION
+
+# install ninja
+RUN case "$TARGETARCH" in \
+    "amd64")  NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux.zip" ;; \
+    "arm64")  NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.11.1/ninja-linux-aarch64.zip" ;; \
+    *)        echo "Unsupported arch: $TARGETARCH" && exit 1 ;; \
+    esac && \
+    curl -L "$NINJA_URL" -o ninja.zip && \
+    unzip ninja.zip -d /usr/local/bin && \
+    chmod +x /usr/local/bin/ninja && \
+    rm ninja.zip
 
 # install gh
 ARG GH_VERSION=2.76.2
