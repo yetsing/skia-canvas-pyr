@@ -17,6 +17,7 @@ RUN bash install-llvm.sh $LLVM_VERSION
 # manually build freetype & fontconfig and install fontconfig in /usr/local
 COPY ./install-fontlibs.sh /opt
 COPY ./freetype.cfg /opt
+COPY ./fontconfig-2.17.1.tar.xz /opt/fontconfig-2.17.1.tar.xz
 RUN bash /opt/install-fontlibs.sh
 
 # move the static libs to a common location consistent across glibc & musl builds

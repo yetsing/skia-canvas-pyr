@@ -26,7 +26,7 @@ FONTCONFIG=fontconfig-$FONTCONFIG_VERSION
 # Instead, we have to download it manually and copy it into the container build context.
 # FONTCONFIG_URL=https://gitlab.freedesktop.org/api/v4/projects/890/packages/generic/fontconfig/$FONTCONFIG_VERSION/${FONTCONFIG}.tar.xz
 # curl -sL $FONTCONFIG_URL | tar xJf - -C /opt
-tar xJf ${FONTCONFIG}.tar.xz -C /opt
+tar xJf /opt/${FONTCONFIG}.tar.xz -C /opt
 cd /opt/${FONTCONFIG}
 meson setup -Dprefix=/ -Dsysconfdir=/etc -Dlocalstatedir=/var -Ddefault_library=static -Dprefer_static=true -Dxml-backend=expat -Dtests=disabled build
 meson compile -C build
