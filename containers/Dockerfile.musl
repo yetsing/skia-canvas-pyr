@@ -28,7 +28,7 @@ FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
 
 RUN apt-get update && apt-get install -y -q \
-    wget curl lsb-release ninja-build software-properties-common gnupg
+  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
 
 # install clang
 ARG LLVM_VERSION=21
