@@ -29,6 +29,9 @@ RUN mkdir -p /opt/skia-static-libs && \
 FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
 
+RUN dnf install -y \
+  curl wget perl zip redhat-lsb-core ninja-build dejavu-sans-fonts
+
 # install gh
 ARG GH_VERSION=2.76.2
 ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_$TARGETARCH.tar.gz
