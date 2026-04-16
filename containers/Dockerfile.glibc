@@ -1,5 +1,4 @@
 ARG MANYLINUX_IMAGE
-ARG LLVM_VERSION=21
 
 # --------------------------------------------------------------------------------------------------------
 
@@ -11,6 +10,7 @@ RUN apt-get update && apt-get install -y -q \
     libexpat1-dev libpng-dev fonts-dejavu-core
 
 # install clang
+ARG LLVM_VERSION=21
 COPY install-llvm.sh .
 RUN bash install-llvm.sh $LLVM_VERSION
 
