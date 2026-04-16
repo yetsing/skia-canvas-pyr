@@ -27,6 +27,8 @@ RUN mkdir -p /opt/skia-static-libs && \
 FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
 
+RUN apt-get update && apt-get install -y -q wget curl
+
 # install clang
 ARG LLVM_VERSION=21
 COPY install-llvm.sh .
