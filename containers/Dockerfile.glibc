@@ -29,6 +29,7 @@ RUN mkdir -p /opt/skia-static-libs && \
 
 FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
+ARG COMMIT_ID
 
 # install dependencies
 # llvm-20 will be installed. llvm-21 need newer glibc than manylinux_2_28
