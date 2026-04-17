@@ -25,6 +25,9 @@ RUN bash /opt/install-fontlibs.sh
 RUN mkdir -p /opt/skia-static-libs && \
     cp /usr/local/lib/*/libfontconfig.a /opt/skia-static-libs
 
+# avoid copy binary files to prevent glibc vs musl conflicts
+RUN rm -rf /usr/local/bin
+
 # --------------------------------------------------------------------------------------------------------
 
 FROM ${MANYLINUX_IMAGE}
@@ -43,6 +46,7 @@ ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VER
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 
 # copy over results of previous build stage
+COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
 
 RUN echo "${COMMIT_ID}" > /opt/commit_id.txt
