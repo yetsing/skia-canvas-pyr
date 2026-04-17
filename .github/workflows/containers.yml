@@ -40,5 +40,7 @@ jobs:
         platforms: ${{ matrix.conf.platform }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
-        build-args: MANYLINUX_IMAGE=${{ matrix.conf.manylinux }}
+        build-args: |
+          MANYLINUX_IMAGE=${{ matrix.conf.manylinux }}
+          COMMIT_ID=${{ github.sha }}
         push: true

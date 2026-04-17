@@ -1,4 +1,5 @@
 ARG MANYLINUX_IMAGE
+ARG COMMIT_ID
 
 # --------------------------------------------------------------------------------------------------------
 
@@ -42,6 +43,8 @@ RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 # copy over results of previous build stage
 COPY --from=dependencies /usr/local /usr/local
 COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
+
+RUN echo "${COMMIT_ID}" > /opt/commit_id.txt
 
 WORKDIR /opt
 
