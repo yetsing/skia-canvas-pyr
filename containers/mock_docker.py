@@ -37,6 +37,7 @@ def main():
         if can_print(path):
             print(f"--- {path} ---")
             print(path.read_text(encoding="utf-8"))
+            print(f"--- End of {path} ---\n")
 
     sys.stdout.flush()
     sys.stderr.flush()
