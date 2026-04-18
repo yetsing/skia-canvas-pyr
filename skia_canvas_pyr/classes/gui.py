@@ -51,15 +51,15 @@ def _handle_ui_event(win: "Window", type: str, e: Dict[str, Any]):
                 **modifiers,  # modifiers 的键会覆盖之前同名的键
             }
 
-            win.emit(e["event"], payload)
+            win.emit(e["event"], **payload)
 
         case "input":
             data = e.get("data")
             inputType = e.get("inputType")
-            win.emit(type, {"data": data, "inputType": inputType})
+            win.emit(type, data=data, inputType=inputType)
 
         case "composition":
-            win.emit(e["event"], {"data": e.get("data"), "locale": _App._locale})
+            win.emit(e["event"], data=e.get("data"), locale=_App._locale)
 
         case "keyboard":
             event = e["event"]
@@ -78,7 +78,7 @@ def _handle_ui_event(win: "Window", type: str, e: Dict[str, Any]):
 
             win.emit(
                 event,
-                {
+                **{
                     "key": key,
                     "code": code,
                     "location": location,
@@ -113,16 +113,22 @@ def _handle_ui_event(win: "Window", type: str, e: Dict[str, Any]):
                 win.ctx.raw_set_size(e["width"], e["height"])
                 win.canvas.raw_set_width(e["width"])
                 win.canvas.raw_set_height(e["height"])
-            win.emit(type, e)
+            win.emit(type, **e)
 
         case "move" | "wheel":
-            win.emit(type, e)
+            win.emit(type, **e)
 
         case "fullscreen":
-            win.emit(type, {"enabled": e})
+            win.emit(type, enabled=e)
 
         case _:
             print(type, e)
+
+
+class EventAttr:
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
 
 class WindowEvent:
@@ -229,7 +235,7 @@ class _App(EventEmitter):
     def wait_for_termination(self):
         wait_for_termination()  # type: ignore
         self._launcher = False
-        self.emit(WindowEvent.idle, self, WindowEvent.idle)
+        self.emit(WindowEvent.idle, EventAttr(target=self, type=WindowEvent.idle))
 
     def quit(self):
         quit()  # type: ignore
@@ -286,10 +292,10 @@ class _App(EventEmitter):
 
                 if frame == 0:
                     win.emit("setup")
-                win.emit("frame", {"frame": frame})
+                win.emit("frame", frame=frame)
                 if win.listener_count("draw"):
                     win.canvas.getContext("2d").reset()
-                    win.emit("draw", {"frame": frame})
+                    win.emit("draw", frame=frame)
 
         # if this is a full roundtrip, return window state & content
         return is_frame and [
@@ -571,9 +577,9 @@ class Window(EventEmitter):
             self.__state["closed"] = False
             Window.events.emit("open", self)
 
-    def emit(self, event: str, *args: Any, **kwargs):
+    def emit(self, event: str, **kwargs):
         try:
-            super().emit(event, self, event, *args, **kwargs)
+            super().emit(event, EventAttr(target=self, type=event, **kwargs))
         except Exception as e:
             # 捕获事件处理器中的异常，避免影响主流程
             print(f"Error in event handler for '{event}': {e}")
