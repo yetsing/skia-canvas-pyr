@@ -8,7 +8,6 @@ import platform
 import sys
 from pathlib import Path
 
-
 script_dir = Path(__file__).parent.resolve()
 MAX_LINE = int(os.environ.get("MAX_LINE", 100))
 DOCKER_CMD = "{{DOCKER_CMD}}"

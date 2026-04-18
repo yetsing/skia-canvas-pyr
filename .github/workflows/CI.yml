@@ -140,6 +140,7 @@ jobs:
         run: |
           docker run \
             -v $(pwd):/build \
+            -w /build \
             --rm python:${{ matrix.python-version }}-alpine sh containers/run_test_alpine.sh
 
       - name: Upload wheels
