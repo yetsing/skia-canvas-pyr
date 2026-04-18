@@ -81,6 +81,12 @@ wheels = [
 name = "skia-canvas-pyr"
 source = { virtual = "." }
 
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "tomli" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
@@ -88,6 +94,11 @@ dev = [
 ]
 
 [package.metadata]
+requires-dist = [
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=9.0.2" },
+    { name = "tomli", marker = "extra == 'dev'", specifier = ">=2.4.0" },
+]
+provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
