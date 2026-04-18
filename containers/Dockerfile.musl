@@ -3,7 +3,7 @@ ARG COMMIT_ID
 
 # --------------------------------------------------------------------------------------------------------
 
-FROM python:3.12-alpine3.20 AS dependencies
+FROM node:20-alpine3.20 AS dependencies
 ARG TARGETARCH
 
 RUN apk update && apk add --update --no-cache \
@@ -34,7 +34,7 @@ ARG TARGETARCH
 ARG COMMIT_ID
 
 RUN apt-get update && apt-get install -y -q \
-  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core
+  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core pkg-config
 
 # install clang
 ARG LLVM_VERSION=21
