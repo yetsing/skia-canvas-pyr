@@ -79,38 +79,32 @@ impl App {
   }
 
   #[allow(deprecated)]
-  pub fn activate(sender: mpsc::Sender<()>) {
-    std::thread::spawn(move || {
-      loop {
-        // define closure to relay events to js and receive canvas updates in return
-        let dispatch = |payload: Value, windows: Option<&mut WindowManager>| -> PyResult<()> {
-          Python::attach(|py| App::dispatch_events(py, payload, windows))
-        };
+  pub fn run_event_loop() {
+    loop {
+      // define closure to relay events to js and receive canvas updates in return
+      let dispatch = |payload: Value, windows: Option<&mut WindowManager>| -> PyResult<()> {
+        Python::attach(|py| App::dispatch_events(py, payload, windows))
+      };
 
-        // run the winit event loop (either once or until all windows are closed depending on mode)
-        let keep_running = APP.with_borrow_mut(|app| {
-          EVENT_LOOP.with_borrow_mut(|event_loop| {
-            match app.mode {
-              LoopMode::Native => {
-                let handler = app.event_handler(dispatch);
-                event_loop.set_control_flow(ControlFlow::Wait);
-                event_loop.run_on_demand(handler).ok();
-                false // final window was closed
-              }
+      // run the winit event loop (either once or until all windows are closed depending on mode)
+      let keep_running = APP.with_borrow_mut(|app| {
+        EVENT_LOOP.with_borrow_mut(|event_loop| {
+          match app.mode {
+            LoopMode::Native => {
+              let handler = app.event_handler(dispatch);
+              event_loop.set_control_flow(ControlFlow::Wait);
+              event_loop.run_on_demand(handler).ok();
+              false // final window was closed
             }
-          })
-        });
+          }
+        })
+      });
 
-        match keep_running {
-          true => continue,
-          _ => break,
-        }
+      match keep_running {
+        true => continue,
+        _ => break,
       }
-
-      if let Err(e) = sender.send(()) {
-        eprintln!("Failed to send shutdown signal: {}", e);
-      }
-    });
+    }
   }
 
   fn dispatch_events(

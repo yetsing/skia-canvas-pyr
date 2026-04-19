@@ -20,13 +20,6 @@ pub mod event;
 
 pub mod window_mgr;
 
-/// 单个全局槽。启动时会覆盖旧的 slot（如果旧任务存在且没有被等待，则旧 receiver 会被丢弃）
-static SLOT: OnceLock<Mutex<Option<mpsc::Receiver<()>>>> = OnceLock::new();
-
-fn slot() -> &'static Mutex<Option<mpsc::Receiver<()>>> {
-  SLOT.get_or_init(|| Mutex::new(None))
-}
-
 fn validate_gpu() -> PyResult<()> {
   // bail out if we can't draw to the screen
   if let Some(reason) = RenderingEngine::default().lacks_gpu_support() {
@@ -38,21 +31,6 @@ fn validate_gpu() -> PyResult<()> {
 #[pyfunction]
 pub fn register(arg: Bound<'_, PyAny>) {
   App::register(arg.unbind());
-}
-
-#[pyfunction]
-pub fn activate() -> PyResult<()> {
-  validate_gpu()?;
-
-  let (tx, rx) = mpsc::channel::<()>();
-  {
-    let mut s = slot().lock().unwrap();
-    *s = Some(rx); // 覆盖前一个（如果存在）
-  }
-
-  App::activate(tx);
-
-  Ok(())
 }
 
 #[pyfunction]
@@ -98,18 +76,8 @@ pub fn quit() {
 }
 
 #[pyfunction]
-pub fn wait_for_termination() -> PyResult<()> {
-  let rx_opt = {
-    let mut s = slot().lock().unwrap();
-    s.take() // 取出并置空
-  };
-
-  match rx_opt {
-    Some(rx) => rx
-      .recv()
-      .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("recv error: {}", e))),
-    None => Err(pyo3::exceptions::PyRuntimeError::new_err("no task started")),
-  }?;
-
+pub fn run_event_loop() -> PyResult<()> {
+  validate_gpu()?;
+  App::run_event_loop();
   Ok(())
 }

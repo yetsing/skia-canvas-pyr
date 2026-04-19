@@ -27,7 +27,7 @@ mod skia_canvas_pyr {
     context::Context2D,
     font_library::{FamilyDetails, add_family, family, get_families, has, reset},
     gradient::CanvasGradient,
-    gui::{activate, close, open, quit, register, set_mode, set_rate, wait_for_termination},
+    gui::{close, open, quit, register, run_event_loop, set_mode, set_rate},
     image::Image,
     path::{Path2D, Path2DBounds},
     pattern::CanvasPattern,

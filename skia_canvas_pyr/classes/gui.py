@@ -13,11 +13,10 @@ try:
         register,
         open_window,
         close_window,
-        activate,
         quit,
         set_mode,
         set_rate,
-        wait_for_termination,
+        run_event_loop,
     )
 
     has_app_api = True
@@ -178,6 +177,7 @@ class _App(EventEmitter):
     )
 
     def __init__(self):
+        super().__init__()
 
         self._event_loop_mode = "native"  # `native` for an OS event loop
         self._started = False  # whether the `eventLoop` property is permanently set
@@ -230,12 +230,6 @@ class _App(EventEmitter):
     def launch(self):
         _check_support()
         self._started = True
-        activate()  # type: ignore
-
-    def wait_for_termination(self):
-        wait_for_termination()  # type: ignore
-        self._launcher = False
-        self.emit(WindowEvent.idle, EventAttr(target=self, type=WindowEvent.idle))
 
     def quit(self):
         quit()  # type: ignore
@@ -255,7 +249,7 @@ class _App(EventEmitter):
         def f2(win: "Window") -> bool:
             # keep active windows and new ones still waiting for a `geom` roundtrip to set their initial position
             if win.id in state or win.top is None:
-                for k, v in state[win.id].items():
+                for k, v in state.get(win.id, {}).items():
                     setattr(win, k, v)
                 return True
             # but otherwise evict all windows that have been closed via title bar widget
@@ -303,6 +297,11 @@ class _App(EventEmitter):
             list(map(lambda w: w.canvas.pages[w.page - 1].core(), self._windows)),
         ]
 
+    def run(self):
+        _check_support()
+        run_event_loop()  # type: ignore
+        self.emit(WindowEvent.idle, EventAttr(target=self, type=WindowEvent.idle))
+
     def on_window_open(self, win: "Window"):
         self._windows.append(win)
         self._frames[win.id] = 0
@@ -320,7 +319,7 @@ class _App(EventEmitter):
 class WindowState(TypedDict):
     title: str
     visible: bool
-    resizeable: bool
+    resizable: bool
     borderless: bool
     background: str
     fullscreen: bool
@@ -330,15 +329,15 @@ class WindowState(TypedDict):
     top: int | None
     width: int
     height: int
-    text_contrast: float
-    text_gamma: float
+    textContrast: float
+    textGamma: float
     cursor: str
     fit: str
     id: int
 
 
 class Window(EventEmitter):
-    __slots__ = ("__canvas", "__state")
+    __slots__ = ("_canvas", "_state")
 
     events = EventEmitter()
     __kwargs = "id,left,top,width,height,title,page,background,fullscreen,cursor,fit,visible,resizable,borderless,closed".split(
@@ -349,6 +348,7 @@ class Window(EventEmitter):
     def __init__(
         self, width: int = 512, height: int = 512, opts: Dict[str, Any] | None = None
     ):
+        super().__init__()
         _check_support()
 
         opts = opts or {}
@@ -381,11 +381,10 @@ class Window(EventEmitter):
                 {"text_contrast": text_contrast, "text_gamma": text_gamma},
             )
 
-        self.__canvas = canvas
-        self.__state = WindowState(
+        self._state = WindowState(
             title="",
             visible=True,
-            resizeable=True,
+            resizable=True,
             borderless=False,
             background="white",
             fullscreen=False,
@@ -395,14 +394,15 @@ class Window(EventEmitter):
             top=None,
             width=width,
             height=height,
-            text_contrast=text_contrast,
-            text_gamma=text_gamma,
+            textContrast=text_contrast,
+            textGamma=text_gamma,
             cursor="default",
             fit="contain",
             id=Window.__next_id,
         )
         Window.__next_id += 1
 
+        self.canvas = canvas
         for k in Window.__kwargs:
             if k in opts:
                 setattr(self, k, opts[k])
@@ -411,15 +411,15 @@ class Window(EventEmitter):
 
     @property
     def state(self) -> WindowState:
-        return self.__state.copy()
+        return self._state.copy()
 
     @property
     def ctx(self) -> CanvasRenderingContext2D:
-        return self.__canvas.pages[self.page - 1]
+        return self._canvas.pages[self.page - 1]
 
     @property
     def id(self) -> int:
-        return self.__state["id"]
+        return self._state["id"]
 
     @id.setter
     def id(self, value: int):
@@ -431,150 +431,151 @@ class Window(EventEmitter):
 
     @property
     def canvas(self) -> Canvas:
-        return self.__canvas
+        return self._canvas
 
     @canvas.setter
     def canvas(self, value: Canvas):
         if not isinstance(value, Canvas):
             raise ValueError("canvas must be an instance of Canvas")
-        self.__canvas = value
-        self.__state["page"] = len(value.pages)
-        self.__state["text_contrast"] = value.engine["textContrast"]
-        self.__state["text_gamma"] = value.engine["textGamma"]
+        value.getContext("2d")  # ensure it has at least one page
+        self._canvas = value
+        self._state["page"] = len(value.pages)
+        self._state["textContrast"] = value.engine["textContrast"]
+        self._state["textGamma"] = value.engine["textGamma"]
 
     @property
     def visible(self) -> bool:
-        return self.__state["visible"]
+        return self._state["visible"]
 
     @visible.setter
     def visible(self, value: bool):
-        self.__state["visible"] = bool(value)
+        self._state["visible"] = bool(value)
 
     @property
-    def resizeable(self) -> bool:
-        return self.__state["resizeable"]
+    def resizable(self) -> bool:
+        return self._state["resizable"]
 
-    @resizeable.setter
-    def resizeable(self, value: bool):
-        self.__state["resizeable"] = bool(value)
+    @resizable.setter
+    def resizable(self, value: bool):
+        self._state["resizable"] = bool(value)
 
     @property
     def borderless(self) -> bool:
-        return self.__state["borderless"]
+        return self._state["borderless"]
 
     @borderless.setter
     def borderless(self, value: bool):
-        self.__state["borderless"] = bool(value)
+        self._state["borderless"] = bool(value)
 
     @property
     def fullscreen(self) -> bool:
-        return self.__state["fullscreen"]
+        return self._state["fullscreen"]
 
     @fullscreen.setter
     def fullscreen(self, value: bool):
-        self.__state["fullscreen"] = bool(value)
+        self._state["fullscreen"] = bool(value)
 
     @property
     def title(self) -> str:
-        return self.__state["title"]
+        return self._state["title"]
 
     @title.setter
     def title(self, value: str):
-        self.__state["title"] = str(value) if value is not None else ""
+        self._state["title"] = str(value) if value is not None else ""
 
     @property
     def cursor(self) -> str:
-        return self.__state["cursor"]
+        return self._state["cursor"]
 
     @cursor.setter
     def cursor(self, value: str):
         if css.cursor(value):
-            self.__state["cursor"] = value
+            self._state["cursor"] = value
 
     @property
     def fit(self) -> str:
-        return self.__state["fit"]
+        return self._state["fit"]
 
     @fit.setter
     def fit(self, value: str):
         if css.fit(value):
-            self.__state["fit"] = value
+            self._state["fit"] = value
 
     @property
     def left(self) -> int | None:
-        return self.__state["left"]
+        return self._state["left"]
 
     @left.setter
     def left(self, value: int | None):
         if value is not None and math.isfinite(value):
-            self.__state["left"] = value
+            self._state["left"] = value
 
     @property
     def top(self) -> int | None:
-        return self.__state["top"]
+        return self._state["top"]
 
     @top.setter
     def top(self, value: int | None):
         if value is not None and math.isfinite(value):
-            self.__state["top"] = value
+            self._state["top"] = value
 
     @property
     def width(self) -> int:
-        return self.__state["width"]
+        return self._state["width"]
 
     @width.setter
     def width(self, value: int):
         if math.isfinite(value):
-            self.__state["width"] = value
+            self._state["width"] = value
 
     @property
     def height(self) -> int:
-        return self.__state["height"]
+        return self._state["height"]
 
     @height.setter
     def height(self, value: int):
         if math.isfinite(value):
-            self.__state["height"] = value
+            self._state["height"] = value
 
     @property
     def page(self) -> int:
-        return self.__state["page"]
+        return self._state["page"]
 
     @page.setter
     def page(self, value: int):
         if value < 0:
-            value += len(self.__canvas.pages) + 1
+            value += len(self._canvas.pages) + 1
         try:
-            page = self.__canvas.pages[value - 1]
+            page = self._canvas.pages[value - 1]
         except IndexError:
             # ignore invalid page number, keep current page
             return
-        if self.__state["page"] != value:
+        if self._state["page"] != value:
             width, height = page.raw_size()
             self.canvas.raw_set_width(width)
             self.canvas.raw_set_height(height)
-            self.__state["page"] = value
+            self._state["page"] = value
 
     @property
     def background(self) -> str:
-        return self.__state["background"]
+        return self._state["background"]
 
     @background.setter
     def background(self, value: str):
-        self.__state["background"] = str(value) if value is not None else ""
+        self._state["background"] = str(value) if value is not None else ""
 
     @property
     def closed(self) -> bool:
-        return self.__state["closed"]
+        return self._state["closed"]
 
     def close(self):
-        if not self.__state["closed"]:
-            self.__state["closed"] = True
+        if not self._state["closed"]:
+            self._state["closed"] = True
             Window.events.emit("close", self)
 
     def open(self):
-        if self.__state["closed"]:
-            self.__state["closed"] = False
+        if self._state["closed"]:
+            self._state["closed"] = False
             Window.events.emit("open", self)
 
     def emit(self, event: str, **kwargs):
