@@ -4,10 +4,11 @@ import shutil
 from pathlib import Path
 
 script_dir = Path(__file__).parent.resolve()
+project_dir = script_dir.parent
 
 
 def main():
-    directory = script_dir / "skia_canvas_pyr"
+    directory = project_dir / "skia_canvas_pyr"
     try:
         if directory.exists() and directory.is_dir():
             shutil.rmtree(directory)
