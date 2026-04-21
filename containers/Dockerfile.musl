@@ -1,10 +1,15 @@
 ARG MANYLINUX_IMAGE
 ARG COMMIT_ID
 
-# --------------------------------------------------------------------------------------------------------
-
-FROM node:20-alpine3.20 AS dependencies
+FROM ${MANYLINUX_IMAGE}
 ARG TARGETARCH
+
+ENV RUSTFLAGS="-C link-arg=-lintl" \
+    CC="clang" \
+    CXX="clang++" \
+    GN_EXE="gn" \
+    SKIA_GN_COMMAND="/usr/bin/gn" \
+    SKIA_NINJA_COMMAND="/usr/bin/ninja"
 
 RUN apk update && apk add --update --no-cache \
     bash curl git python3 perl build-base g++ linux-headers ttf-dejavu \
@@ -24,34 +29,12 @@ RUN bash /opt/install-fontlibs.sh
 RUN mkdir -p /opt/skia-static-libs && \
     cp /usr/local/lib/libfontconfig.a /opt/skia-static-libs
 
-# avoid copy binary files to prevent glibc vs musl conflicts
-RUN rm -rf /usr/local/bin
-
-# --------------------------------------------------------------------------------------------------------
-
-FROM ${MANYLINUX_IMAGE}
-ARG TARGETARCH
-ARG COMMIT_ID
-
-RUN apt-get update && apt-get install -y -q \
-  curl wget perl zip software-properties-common lsb-release build-essential ninja-build fonts-dejavu-core pkg-config
-
-# install clang
-ARG LLVM_VERSION=21
-COPY install-llvm.sh .
-RUN bash install-llvm.sh $LLVM_VERSION
-
 # install gh
 ARG GH_VERSION=2.76.2
 ARG GH_URL=https://github.com/cli/cli/releases/download/v$GH_VERSION/gh_${GH_VERSION}_linux_$TARGETARCH.tar.gz
 RUN curl -sL $GH_URL | tar xz --strip-components=2 -C /usr/local/bin
 
-# copy over results of previous build stage
-COPY --from=dependencies /usr/local /usr/local
-COPY --from=dependencies /opt/skia-static-libs /opt/skia-static-libs
-
 RUN echo "${COMMIT_ID}" > /opt/commit_id.txt
 
 WORKDIR /opt
-
 CMD ["bash"]

@@ -10,6 +10,12 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dynamic = ["version"]
+keywords = ["rust", "skia"]
+license = { file = "LICENSE" }
+
+[project.urls]
+homepage = "https://github.com/yetsing/skia-canvas-pyr"
+repository = "https://github.com/yetsing/skia-canvas-pyr"
 
 [dependency-groups]
 dev = [

@@ -25,10 +25,10 @@ jobs:
       matrix:
         python-version:
           - '3.10'
-          - '3.11'
-          - '3.12'
-          - '3.13'
-          - '3.14'
+          # - '3.11'
+          # - '3.12'
+          # - '3.13'
+          # - '3.14'
         conf:
           - runner: ubuntu-latest
             target: x86_64
@@ -105,9 +105,18 @@ jobs:
 
       - name: Build wheels
         uses: PyO3/maturin-action@v1
-        if: ${{ !matrix.conf.docker }}
+        if: ${{ !matrix.conf.docker && !contains(matrix.conf.target-triple, 'musl') }}
         with:
           target: ${{ matrix.conf.target-triple }}
+          args: -i python${{ matrix.python-version }} --release --out dist --features "${{ matrix.conf.cargo_features }}"
+          container: ${{ matrix.conf.container }}
+          before-script-linux: ${{ matrix.conf.before-script-linux }}
+
+      # rust use cross-compilation if --target is specified, but "-C target-feature=-crt-static" is not working for cross-compilation
+      - name: Build wheels (musllinux)
+        uses: PyO3/maturin-action@v1
+        if: ${{ !matrix.conf.docker && contains(matrix.conf.target-triple, 'musl') }}
+        with:
           args: -i python${{ matrix.python-version }} --release --out dist --features "${{ matrix.conf.cargo_features }}"
           container: ${{ matrix.conf.container }}
           before-script-linux: ${{ matrix.conf.before-script-linux }}
@@ -133,12 +142,16 @@ jobs:
         # if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: astral-sh/setup-uv@v7
 
+      # remove same-named directory to avoid conflict with the installed package when running tests
+      - name: Before test
+        run: rm -rf skia_canvas_pyr
+
       - name: Install built wheel and Test (Native)
-        if: ${{ !startsWith(matrix.conf.manylinux, 'musl') }}
+        if: ${{ !contains(matrix.conf.target-triple, 'musl') }}
         run: bash containers/run_test.sh
 
       - name: Install built wheel and Test (musllinux)
-        if: ${{ startsWith(matrix.conf.manylinux, 'musl') }}
+        if: ${{ contains(matrix.conf.target-triple, 'musl') }}
         run: |
           docker run \
             -v $(pwd):/build \
