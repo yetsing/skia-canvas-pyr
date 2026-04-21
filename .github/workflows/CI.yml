@@ -144,7 +144,7 @@ jobs:
 
       # remove same-named directory to avoid conflict with the installed package when running tests
       - name: Before test
-        run: rm -rf skia_canvas_pyr
+        run: python containers/before_test.py
 
       - name: Install built wheel and Test (Native)
         if: ${{ !contains(matrix.conf.target-triple, 'musl') }}
