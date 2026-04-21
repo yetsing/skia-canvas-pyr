@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         conf:
-          - {platform: linux/amd64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_x86_64:latest, arch: amd64}
+          - {platform: linux/amd64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_x86_64:latest,  arch: amd64}
           - {platform: linux/arm64, libc: glibc, manylinux: quay.io/pypa/manylinux_2_28_aarch64:latest, arch: arm64}
-          - {platform: linux/amd64, libc: musl, manylinux: ghcr.io/rust-cross/rust-musl-cross:x86_64-musl, arch: amd64}
-          - {platform: linux/arm64, libc: musl, manylinux: ghcr.io/rust-cross/rust-musl-cross:aarch64-musl, arch: arm64}
+          - {platform: linux/amd64, libc: musl,  manylinux: quay.io/pypa/musllinux_1_2_x86_64:latest,   arch: amd64}
+          - {platform: linux/arm64, libc: musl,  manylinux: quay.io/pypa/musllinux_1_2_aarch64:latest,  arch: arm64}
 
     steps:
     - name: Checkout
