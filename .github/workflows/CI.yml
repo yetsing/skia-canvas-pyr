@@ -46,22 +46,22 @@ jobs:
             container: ghcr.io/${{ github.repository }}/builder-amd64-musl:latest
             before-script-linux: bash containers/before_script_linux.sh
             cargo_features: vulkan,window,freetype
-          # - runner: ubuntu-24.04-arm
-          #   target: aarch64
-          #   manylinux: auto
-          #   os: linux
-          #   target-triple: aarch64-unknown-linux-gnu
-          #   container: ghcr.io/${{ github.repository }}/builder-arm64-glibc:latest
-          #   before-script-linux: bash containers/before_script_linux.sh
-          #   cargo_features: vulkan,window,freetype
-          # - runner: ubuntu-24.04-arm
-          #   target: aarch64
-          #   manylinux: musllinux_1_1
-          #   os: linux
-          #   target-triple: aarch64-unknown-linux-musl
-          #   container: ghcr.io/${{ github.repository }}/builder-arm64-musl:latest
-          #   before-script-linux: bash containers/before_script_linux.sh
-          #   cargo_features: vulkan,window,freetype
+          - runner: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: auto
+            os: linux
+            target-triple: aarch64-unknown-linux-gnu
+            container: ghcr.io/${{ github.repository }}/builder-arm64-glibc:latest
+            before-script-linux: bash containers/before_script_linux.sh
+            cargo_features: vulkan,window,freetype
+          - runner: ubuntu-24.04-arm
+            target: aarch64
+            manylinux: musllinux_1_1
+            os: linux
+            target-triple: aarch64-unknown-linux-musl
+            container: ghcr.io/${{ github.repository }}/builder-arm64-musl:latest
+            before-script-linux: bash containers/before_script_linux.sh
+            cargo_features: vulkan,window,freetype
           - runner: windows-latest
             target: x86_64
             os: windows

@@ -2,6 +2,8 @@
 
 A Python canvas library powered by Skia, with bindings implemented in Rust.
 
+Support Python3.10+.
+
 文档参考 [skia-canvas](http://skia-canvas.org/api) ，除了一些 JS 特性， API 基本一致。
 
 ## Installation
