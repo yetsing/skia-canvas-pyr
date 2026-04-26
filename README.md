@@ -1,5 +1,10 @@
 # canvas_pyr
 
+[![image](https://img.shields.io/pypi/v/skia-canvas-pyr.svg)](https://pypi.python.org/pypi/skia-canvas-pyr)
+[![image](https://img.shields.io/pypi/l/skia-canvas-pyr.svg)](https://pypi.python.org/pypi/skia-canvas-pyr)
+[![image](https://img.shields.io/pypi/pyversions/skia-canvas-pyr.svg)](https://pypi.python.org/pypi/skia-canvas-pyr)
+[![Actions status](https://github.com/yetsing/skia-canvas-pyr/actions/workflows/CI.yml/badge.svg)](https://github.com/yetsing/skia-canvas-pyr/actions)
+
 A Python canvas library powered by Skia, with bindings implemented in Rust.
 
 Support Python3.10+.
